@@ -39,7 +39,6 @@ else
         pip install install-jdk; python -c 'import jdk; jdk.install("17")'
         export JAVA_HOME=$(python -c 'import jdk; print(jdk.install("17"))')
         RUNNER="${JAVA_HOME}/bin/java"
-        exit 1
     else
         echo "JDK installation skipped."\
         "You can manually install JDK (8 or later) and set JAVA_HOME in your environment."
