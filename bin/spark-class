@@ -36,13 +36,13 @@ else
     read -r input
 
     if [ "$input" == "Y" ] || [ "$input" == "y" ]; then
-        pip install install-jdk; python -c 'import jdk; jdk.install("17")'
+        pip install install-jdk
         export JAVA_HOME=$(python -c 'import jdk; print(jdk.install("17"))')
         RUNNER="${JAVA_HOME}/bin/java"
     else
         echo "JDK installation skipped."\
         "You can manually install JDK (8 or later) and set JAVA_HOME in your environment."
-        exit 0
+        exit 1
     fi
   fi
 fi
