@@ -30,8 +30,21 @@ else
   if [ "$(command -v java)" ]; then
     RUNNER="java"
   else
-    echo "JAVA_HOME is not set" >&2
-    exit 1
+    echo "JAVA_HOME is not set."\
+    "Press Y to install JDK 17 and set JAVA_HOME, or any key to quit." >&2
+
+    read -r input
+
+    if [ "$input" == "Y" ] || [ "$input" == "y" ]; then
+        pip install install-jdk; python -c 'import jdk; jdk.install("17")'
+        export JAVA_HOME="$HOME/.jdk/jdk-17.0.9+9"
+        RUNNER="${JAVA_HOME}/bin/java"
+        exit 1
+    else
+        echo "JDK installation skipped."\
+        "You can manually install JDK (8 or later) and set JAVA_HOME in your environment."
+        exit 0
+    fi
   fi
 fi
 
