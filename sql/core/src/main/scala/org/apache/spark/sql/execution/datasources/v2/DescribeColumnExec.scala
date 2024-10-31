@@ -31,6 +31,7 @@ case class DescribeColumnExec(
     override val output: Seq[Attribute],
     column: Attribute,
     isExtended: Boolean,
+    asJson: Boolean,
     table: Table) extends LeafV2CommandExec {
 
   override protected def run(): Seq[InternalRow] = {

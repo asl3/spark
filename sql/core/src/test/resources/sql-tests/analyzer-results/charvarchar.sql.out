@@ -14,7 +14,7 @@ DescribeTableCommand `spark_catalog`.`default`.`char_tbl`, true, [col_name#x, da
 -- !query
 desc formatted char_tbl c
 -- !query analysis
-DescribeColumnCommand `spark_catalog`.`default`.`char_tbl`, [spark_catalog, default, char_tbl, c], true, [info_name#x, info_value#x]
+DescribeColumnCommand `spark_catalog`.`default`.`char_tbl`, [spark_catalog, default, char_tbl, c], true, false, [info_name#x, info_value#x]
 
 
 -- !query
@@ -49,7 +49,7 @@ DescribeTableCommand `spark_catalog`.`default`.`char_tbl2`, true, [col_name#x, d
 -- !query
 desc formatted char_tbl2 c
 -- !query analysis
-DescribeColumnCommand `spark_catalog`.`default`.`char_tbl2`, [spark_catalog, default, char_tbl2, c], true, [info_name#x, info_value#x]
+DescribeColumnCommand `spark_catalog`.`default`.`char_tbl2`, [spark_catalog, default, char_tbl2, c], true, false, [info_name#x, info_value#x]
 
 
 -- !query
@@ -67,7 +67,7 @@ DescribeTableCommand `spark_catalog`.`default`.`char_tbl3`, true, [col_name#x, d
 -- !query
 desc formatted char_tbl3 c
 -- !query analysis
-DescribeColumnCommand `spark_catalog`.`default`.`char_tbl3`, [spark_catalog, default, char_tbl3, c], true, [info_name#x, info_value#x]
+DescribeColumnCommand `spark_catalog`.`default`.`char_tbl3`, [spark_catalog, default, char_tbl3, c], true, false, [info_name#x, info_value#x]
 
 
 -- !query
@@ -99,7 +99,7 @@ DescribeTableCommand `spark_catalog`.`default`.`char_view`, true, [col_name#x, d
 -- !query
 desc formatted char_view c
 -- !query analysis
-DescribeColumnCommand `spark_catalog`.`default`.`char_view`, [c], true, [info_name#x, info_value#x]
+DescribeColumnCommand `spark_catalog`.`default`.`char_view`, [c], true, false, [info_name#x, info_value#x]
 
 
 -- !query

@@ -168,6 +168,7 @@ IS	false
 ITEMS	false
 ITERATE	false
 JOIN	false
+JSON	false
 KEYS	false
 LANGUAGE	false
 LAST	false

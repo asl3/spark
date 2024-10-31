@@ -609,7 +609,7 @@ EXPLAIN EXTENDED DESC t
 struct<plan:string>
 -- !query output
 == Parsed Logical Plan ==
-'DescribeRelation false, [col_name#x, data_type#x, comment#x]
+'DescribeRelation false, false, [col_name#x, data_type#x, comment#x]
 +- 'UnresolvedTableOrView [t], DESCRIBE TABLE, true
 
 == Analyzed Logical Plan ==
@@ -631,7 +631,7 @@ struct<plan:string>
 -- !query output
 == Physical Plan ==
 Execute DescribeColumnCommand
-   +- DescribeColumnCommand `spark_catalog`.`default`.`t`, [spark_catalog, default, t, b], false, [info_name#x, info_value#x]
+   +- DescribeColumnCommand `spark_catalog`.`default`.`t`, [spark_catalog, default, t, b], false, false, [info_name#x, info_value#x]
 
 
 -- !query

@@ -20,36 +20,39 @@ package org.apache.spark.sql.execution.datasources.v2
 import scala.collection.mutable.ArrayBuffer
 import scala.jdk.CollectionConverters._
 
+import org.apache.spark.sql.Row
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.catalog.{CatalogTableType, ClusterBySpec}
-import org.apache.spark.sql.catalyst.expressions.Attribute
+import org.apache.spark.sql.catalyst.expressions.{Attribute, GenericRowWithSchema}
 import org.apache.spark.sql.catalyst.util.{quoteIfNeeded, ResolveDefaultColumns}
 import org.apache.spark.sql.connector.catalog.{CatalogV2Util, SupportsMetadataColumns, SupportsRead, Table, TableCatalog}
 import org.apache.spark.sql.connector.expressions.{ClusterByTransform, IdentityTransform}
 import org.apache.spark.sql.connector.read.SupportsReportStatistics
 import org.apache.spark.sql.errors.QueryExecutionErrors
+import org.apache.spark.sql.execution.SparkPlan
+import org.apache.spark.sql.execution.datasources.v2.V2CommandExec
+import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.util.CaseInsensitiveStringMap
+import org.apache.spark.unsafe.types.UTF8String
 import org.apache.spark.util.ArrayImplicits._
 
-case class DescribeTableExec(
-    output: Seq[Attribute],
-    table: Table,
-    isExtended: Boolean) extends LeafV2CommandExec {
-  override protected def run(): Seq[InternalRow] = {
+object DescribeTableUtils extends V2CommandExec {
+
+  def collectRows(table: Table, isExtended: Boolean): Seq[InternalRow] = {
     val rows = new ArrayBuffer[InternalRow]()
-    addSchema(rows)
-    addPartitioning(rows)
-    addClustering(rows)
+    addSchema(rows, table)
+    addPartitioning(rows, table)
+    addClustering(rows, table)
 
     if (isExtended) {
-      addMetadataColumns(rows)
-      addTableDetails(rows)
-      addTableStats(rows)
+      addMetadataColumns(rows, table)
+      addTableDetails(rows, table)
+      addTableStats(rows, table)
     }
     rows.toSeq
   }
 
-  private def addTableDetails(rows: ArrayBuffer[InternalRow]): Unit = {
+  private def addTableDetails(rows: ArrayBuffer[InternalRow], table: Table): Unit = {
     rows += emptyRow()
     rows += toCatalystRow("# Detailed Table Information", "", "")
     rows += toCatalystRow("Name", table.name(), "")
@@ -81,14 +84,14 @@ case class DescribeTableExec(
     }
   }
 
-  private def addSchema(rows: ArrayBuffer[InternalRow]): Unit = {
-    rows ++= table.schema.map{ column =>
+  private def addSchema(rows: ArrayBuffer[InternalRow], table: Table): Unit = {
+    rows ++= table.schema.map { column =>
       toCatalystRow(
         column.name, column.dataType.simpleString, column.getComment().orNull)
     }
   }
 
-  private def addMetadataColumns(rows: ArrayBuffer[InternalRow]): Unit = table match {
+  private def addMetadataColumns(rows: ArrayBuffer[InternalRow], table: Table): Unit = table match {
     case hasMeta: SupportsMetadataColumns if hasMeta.metadataColumns.nonEmpty =>
       rows += emptyRow()
       rows += toCatalystRow("# Metadata Columns", "", "")
@@ -101,50 +104,7 @@ case class DescribeTableExec(
     case _ =>
   }
 
-  private def addClusteringToRows(
-      clusterBySpec: ClusterBySpec,
-      rows: ArrayBuffer[InternalRow]): Unit = {
-    rows += toCatalystRow("# Clustering Information", "", "")
-    rows += toCatalystRow(s"# ${output.head.name}", output(1).name, output(2).name)
-    rows ++= clusterBySpec.columnNames.map { fieldNames =>
-      val nestedField = table.schema.findNestedField(fieldNames.fieldNames.toIndexedSeq)
-      assert(nestedField.isDefined,
-        "The clustering column " +
-          s"${fieldNames.fieldNames.map(quoteIfNeeded).mkString(".")} " +
-          s"was not found in the table schema ${table.schema.catalogString}.")
-      nestedField.get
-    }.map { case (path, field) =>
-      toCatalystRow(
-        (path :+ field.name).map(quoteIfNeeded).mkString("."),
-        field.dataType.simpleString,
-        field.getComment().orNull)
-    }
-  }
-
-  private def addClustering(rows: ArrayBuffer[InternalRow]): Unit = {
-    ClusterBySpec.extractClusterBySpec(table.partitioning.toIndexedSeq).foreach { clusterBySpec =>
-      addClusteringToRows(clusterBySpec, rows)
-    }
-  }
-
-  private def addTableStats(rows: ArrayBuffer[InternalRow]): Unit = table match {
-    case read: SupportsRead =>
-      read.newScanBuilder(CaseInsensitiveStringMap.empty()).build() match {
-        case s: SupportsReportStatistics =>
-          val stats = s.estimateStatistics()
-          val statsComponents = Seq(
-            Option.when(stats.sizeInBytes().isPresent)(s"${stats.sizeInBytes().getAsLong} bytes"),
-            Option.when(stats.numRows().isPresent)(s"${stats.numRows().getAsLong} rows")
-          ).flatten
-          if (statsComponents.nonEmpty) {
-            rows += toCatalystRow("Statistics", statsComponents.mkString(", "), null)
-          }
-        case _ =>
-      }
-    case _ =>
-  }
-
-  private def addPartitioning(rows: ArrayBuffer[InternalRow]): Unit = {
+  private def addPartitioning(rows: ArrayBuffer[InternalRow], table: Table): Unit = {
     // Clustering columns are handled in addClustering().
     val partitioning = table.partitioning
       .filter(t => !t.isInstanceOf[ClusterByTransform])
@@ -165,11 +125,11 @@ case class DescribeTableExec(
             }
             nestedField.get
           }.map { case (path, field) =>
-            toCatalystRow(
-              (path :+ field.name).map(quoteIfNeeded(_)).mkString("."),
-              field.dataType.simpleString,
-              field.getComment().orNull)
-          }
+          toCatalystRow(
+            (path :+ field.name).map(quoteIfNeeded(_)).mkString("."),
+            field.dataType.simpleString,
+            field.getComment().orNull)
+        }
       } else {
         rows += emptyRow()
         rows += toCatalystRow("# Partitioning", "", "")
@@ -180,5 +140,100 @@ case class DescribeTableExec(
     }
   }
 
+  private def addClusteringToRows(
+   clusterBySpec: ClusterBySpec,
+   rows: ArrayBuffer[InternalRow],
+   table: Table): Unit = {
+    rows += toCatalystRow("# Clustering Information", "", "")
+    rows += toCatalystRow(s"# ${output.head.name}", output(1).name, output(2).name)
+    rows ++= clusterBySpec.columnNames.map { fieldNames =>
+      val nestedField = table.schema.findNestedField(fieldNames.fieldNames.toIndexedSeq)
+      assert(nestedField.isDefined,
+        "The clustering column " +
+          s"${fieldNames.fieldNames.map(quoteIfNeeded).mkString(".")} " +
+          s"was not found in the table schema ${table.schema.catalogString}.")
+      nestedField.get
+    }.map { case (path, field) =>
+      toCatalystRow(
+        (path :+ field.name).map(quoteIfNeeded).mkString("."),
+        field.dataType.simpleString,
+        field.getComment().orNull)
+    }
+  }
+
+  private def addClustering(rows: ArrayBuffer[InternalRow], table: Table): Unit = {
+    ClusterBySpec.extractClusterBySpec(table.partitioning.toIndexedSeq).foreach { clusterBySpec =>
+      addClusteringToRows(clusterBySpec, rows, table)
+    }
+  }
+
+  private def addTableStats(rows: ArrayBuffer[InternalRow], table: Table): Unit = table match {
+    case read: SupportsRead =>
+      read.newScanBuilder(CaseInsensitiveStringMap.empty()).build() match {
+        case s: SupportsReportStatistics =>
+          val stats = s.estimateStatistics()
+          val statsComponents = Seq(
+            Option.when(stats.sizeInBytes().isPresent)(s"${stats.sizeInBytes().getAsLong} bytes"),
+            Option.when(stats.numRows().isPresent)(s"${stats.numRows().getAsLong} rows")
+          ).flatten
+          if (statsComponents.nonEmpty) {
+            rows += toCatalystRow("Statistics", statsComponents.mkString(", "), null)
+          }
+        case _ =>
+      }
+    case _ =>
+  }
+
   private def emptyRow(): InternalRow = toCatalystRow("", "", "")
+
+  override protected def run(): Seq[InternalRow] = Seq.empty
+
+  override def output: Seq[Attribute] = Seq.empty
+
+  override def children: Seq[SparkPlan] = Seq.empty
+
+  override protected def withNewChildrenInternal(newChildren: IndexedSeq[SparkPlan]): SparkPlan =
+    this
+
+  override def productArity: Int = 0
+
+  override def productElement(n: Int): Any = null
+
+  override def canEqual(that: Any): Boolean = false
+}
+
+case class DescribeTableExec(
+    output: Seq[Attribute],
+    table: Table,
+    isExtended: Boolean) extends LeafV2CommandExec {
+  override protected def run(): Seq[InternalRow] = {
+    DescribeTableUtils.collectRows(table, isExtended)
+  }
+}
+
+case class DescribeTableAsJsonExec(
+  output: Seq[Attribute],
+  table: Table,
+  isExtended: Boolean) extends LeafV2CommandExec {
+
+  override def run(): Seq[InternalRow] = {
+    // Execute the original DescribeTableExec command to get the rows
+    val rows: Seq[InternalRow] = DescribeTableUtils.collectRows(table, isExtended)
+
+    val jsonArray = rows.map { row =>
+      val schema = table.schema
+      val rowAsRow = internalRowToRow(row, schema)
+      rowToJson(rowAsRow)
+    }.mkString("[", ",", "]")
+
+    Seq(InternalRow(UTF8String.fromString(jsonArray)))
+  }
+
+  private def internalRowToRow(internalRow: InternalRow, schema: StructType): Row = {
+    new GenericRowWithSchema(internalRow.toSeq(schema).toArray, schema)
+  }
+
+  private def rowToJson(row: Row): String = {
+    row.json
+  }
 }

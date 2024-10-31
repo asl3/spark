@@ -793,6 +793,7 @@ case class DescribeColumnCommand(
     table: TableIdentifier,
     colNameParts: Seq[String],
     isExtended: Boolean,
+    asJson: Boolean,
     override val output: Seq[Attribute])
   extends LeafRunnableCommand {
 

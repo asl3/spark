@@ -342,16 +342,19 @@ class DataSourceV2Strategy(session: SparkSession) extends Strategy with Predicat
     case DescribeNamespace(ResolvedNamespace(catalog, ns, _), extended, output) =>
       DescribeNamespaceExec(output, catalog.asNamespaceCatalog, ns, extended) :: Nil
 
-    case DescribeRelation(r: ResolvedTable, partitionSpec, isExtended, output) =>
+    case DescribeRelation(r: ResolvedTable, partitionSpec, isExtended, asJson, output) =>
       if (partitionSpec.nonEmpty) {
         throw QueryCompilationErrors.describeDoesNotSupportPartitionForV2TablesError()
+      } else if (asJson) {
+        DescribeTableAsJsonExec(output, r.table, isExtended) :: Nil
+      } else {
+        DescribeTableExec(output, r.table, isExtended) :: Nil
       }
-      DescribeTableExec(output, r.table, isExtended) :: Nil
 
-    case DescribeColumn(r: ResolvedTable, column, isExtended, output) =>
+    case DescribeColumn(r: ResolvedTable, column, isExtended, asJson, output) =>
       column match {
         case c: Attribute =>
-          DescribeColumnExec(output, c, isExtended, r.table) :: Nil
+          DescribeColumnExec(output, c, isExtended, asJson, r.table) :: Nil
         case nested =>
           throw QueryCompilationErrors.commandNotSupportNestedColumnError(
             "DESC TABLE COLUMN", toPrettySQL(nested))
