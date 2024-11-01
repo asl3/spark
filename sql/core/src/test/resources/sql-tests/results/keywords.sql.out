@@ -169,7 +169,7 @@ IS	false
 ITEMS	false
 ITERATE	false
 JOIN	false
-JSON	true
+JSON	false
 KEYS	false
 LANGUAGE	false
 LAST	false
@@ -376,4 +376,4 @@ SELECT keyword from SQL_KEYWORDS() WHERE reserved
 -- !query schema
 struct<keyword:string>
 -- !query output
-JSON
+

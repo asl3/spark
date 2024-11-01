@@ -261,15 +261,7 @@ CREATE TABLE sql_on_files.test_json USING JSON AS SELECT 1
 -- !query schema
 struct<>
 -- !query output
-org.apache.spark.sql.catalyst.parser.ParseException
-{
-  "errorClass" : "PARSE_SYNTAX_ERROR",
-  "sqlState" : "42601",
-  "messageParameters" : {
-    "error" : "'JSON'",
-    "hint" : ""
-  }
-}
+
 
 
 -- !query
@@ -277,14 +269,20 @@ SELECT * FROM json.``
 -- !query schema
 struct<>
 -- !query output
-org.apache.spark.sql.catalyst.parser.ParseException
+org.apache.spark.sql.AnalysisException
 {
-  "errorClass" : "PARSE_SYNTAX_ERROR",
-  "sqlState" : "42601",
+  "errorClass" : "INVALID_EMPTY_LOCATION",
+  "sqlState" : "42K05",
   "messageParameters" : {
-    "error" : "'json'",
-    "hint" : ""
-  }
+    "location" : ""
+  },
+  "queryContext" : [ {
+    "objectType" : "",
+    "objectName" : "",
+    "startIndex" : 15,
+    "stopIndex" : 21,
+    "fragment" : "json.``"
+  } ]
 }
 
 
@@ -293,14 +291,20 @@ SELECT * FROM json.`file:tmp`
 -- !query schema
 struct<>
 -- !query output
-org.apache.spark.sql.catalyst.parser.ParseException
+org.apache.spark.sql.AnalysisException
 {
-  "errorClass" : "PARSE_SYNTAX_ERROR",
-  "sqlState" : "42601",
+  "errorClass" : "INVALID_LOCATION",
+  "sqlState" : "42K05",
   "messageParameters" : {
-    "error" : "'json'",
-    "hint" : ""
-  }
+    "location" : "file:tmp"
+  },
+  "queryContext" : [ {
+    "objectType" : "",
+    "objectName" : "",
+    "startIndex" : 15,
+    "stopIndex" : 29,
+    "fragment" : "json.`file:tmp`"
+  } ]
 }
 
 
@@ -309,13 +313,12 @@ SELECT * FROM json.`/file/not/found`
 -- !query schema
 struct<>
 -- !query output
-org.apache.spark.sql.catalyst.parser.ParseException
+org.apache.spark.sql.AnalysisException
 {
-  "errorClass" : "PARSE_SYNTAX_ERROR",
-  "sqlState" : "42601",
+  "errorClass" : "PATH_NOT_FOUND",
+  "sqlState" : "42K03",
   "messageParameters" : {
-    "error" : "'json'",
-    "hint" : ""
+    "path" : "file:/file/not/found"
   }
 }
 
@@ -323,17 +326,9 @@ org.apache.spark.sql.catalyst.parser.ParseException
 -- !query
 SELECT * FROM json.`${spark.sql.warehouse.dir}/sql_on_files.db/test_json`
 -- !query schema
-struct<>
+struct<1:bigint>
 -- !query output
-org.apache.spark.sql.catalyst.parser.ParseException
-{
-  "errorClass" : "PARSE_SYNTAX_ERROR",
-  "sqlState" : "42601",
-  "messageParameters" : {
-    "error" : "'json'",
-    "hint" : ""
-  }
-}
+1
 
 
 -- !query
@@ -341,14 +336,7 @@ DROP TABLE sql_on_files.test_json
 -- !query schema
 struct<>
 -- !query output
-org.apache.spark.sql.catalyst.analysis.NoSuchTableException
-{
-  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
-  "sqlState" : "42P01",
-  "messageParameters" : {
-    "relationName" : "`spark_catalog`.`sql_on_files`.`test_json`"
-  }
-}
+
 
 
 -- !query

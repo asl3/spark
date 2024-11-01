@@ -18,83 +18,35 @@ CreateViewCommand `v_empty`, [(e,None)], select 1 where false, false, false, Loc
 -- !query
 create table t(c int) using json
 -- !query analysis
-org.apache.spark.sql.catalyst.parser.ParseException
-{
-  "errorClass" : "PARSE_SYNTAX_ERROR",
-  "sqlState" : "42601",
-  "messageParameters" : {
-    "error" : "'json'",
-    "hint" : ""
-  }
-}
+CreateDataSourceTableCommand `spark_catalog`.`default`.`t`, false
 
 
 -- !query
 insert into t values (1), (null)
 -- !query analysis
-org.apache.spark.sql.catalyst.ExtendedAnalysisException
-{
-  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
-  "sqlState" : "42P01",
-  "messageParameters" : {
-    "relationName" : "`t`"
-  },
-  "queryContext" : [ {
-    "objectType" : "",
-    "objectName" : "",
-    "startIndex" : 13,
-    "stopIndex" : 13,
-    "fragment" : "t"
-  } ]
-}
+InsertIntoHadoopFsRelationCommand file:[not included in comparison]/{warehouse_dir}/t, false, JSON, [path=file:[not included in comparison]/{warehouse_dir}/t], Append, `spark_catalog`.`default`.`t`, org.apache.spark.sql.execution.datasources.InMemoryFileIndex(file:[not included in comparison]/{warehouse_dir}/t), [c]
++- Project [cast(col1#x as int) AS c#x]
+   +- LocalRelation [col1#x]
 
 
 -- !query
 create table t2(d int) using json
 -- !query analysis
-org.apache.spark.sql.catalyst.parser.ParseException
-{
-  "errorClass" : "PARSE_SYNTAX_ERROR",
-  "sqlState" : "42601",
-  "messageParameters" : {
-    "error" : "'json'",
-    "hint" : ""
-  }
-}
+CreateDataSourceTableCommand `spark_catalog`.`default`.`t2`, false
 
 
 -- !query
 insert into t2 values (2)
 -- !query analysis
-org.apache.spark.sql.catalyst.ExtendedAnalysisException
-{
-  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
-  "sqlState" : "42P01",
-  "messageParameters" : {
-    "relationName" : "`t2`"
-  },
-  "queryContext" : [ {
-    "objectType" : "",
-    "objectName" : "",
-    "startIndex" : 13,
-    "stopIndex" : 14,
-    "fragment" : "t2"
-  } ]
-}
+InsertIntoHadoopFsRelationCommand file:[not included in comparison]/{warehouse_dir}/t2, false, JSON, [path=file:[not included in comparison]/{warehouse_dir}/t2], Append, `spark_catalog`.`default`.`t2`, org.apache.spark.sql.execution.datasources.InMemoryFileIndex(file:[not included in comparison]/{warehouse_dir}/t2), [d]
++- Project [cast(col1#x as int) AS d#x]
+   +- LocalRelation [col1#x]
 
 
 -- !query
 create table t_empty(e int) using json
 -- !query analysis
-org.apache.spark.sql.catalyst.parser.ParseException
-{
-  "errorClass" : "PARSE_SYNTAX_ERROR",
-  "sqlState" : "42601",
-  "messageParameters" : {
-    "error" : "'json'",
-    "hint" : ""
-  }
-}
+CreateDataSourceTableCommand `spark_catalog`.`default`.`t_empty`, false
 
 
 -- !query
@@ -106,21 +58,12 @@ SetCommand (spark.sql.legacy.nullInEmptyListBehavior,Some(false))
 -- !query
 select c, c in (select e from t_empty) from t
 -- !query analysis
-org.apache.spark.sql.catalyst.ExtendedAnalysisException
-{
-  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
-  "sqlState" : "42P01",
-  "messageParameters" : {
-    "relationName" : "`t`"
-  },
-  "queryContext" : [ {
-    "objectType" : "",
-    "objectName" : "",
-    "startIndex" : 45,
-    "stopIndex" : 45,
-    "fragment" : "t"
-  } ]
-}
+Project [c#x, c#x IN (list#x []) AS (c IN (listquery()))#x]
+:  +- Project [e#x]
+:     +- SubqueryAlias spark_catalog.default.t_empty
+:        +- Relation spark_catalog.default.t_empty[e#x] json
++- SubqueryAlias spark_catalog.default.t
+   +- Relation spark_catalog.default.t[c#x] json
 
 
 -- !query
@@ -143,21 +86,12 @@ Project [c#x, c#x IN (list#x []) AS (c IN (listquery()))#x]
 -- !query
 select c, c not in (select e from t_empty) from t
 -- !query analysis
-org.apache.spark.sql.catalyst.ExtendedAnalysisException
-{
-  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
-  "sqlState" : "42P01",
-  "messageParameters" : {
-    "relationName" : "`t`"
-  },
-  "queryContext" : [ {
-    "objectType" : "",
-    "objectName" : "",
-    "startIndex" : 49,
-    "stopIndex" : 49,
-    "fragment" : "t"
-  } ]
-}
+Project [c#x, NOT c#x IN (list#x []) AS (NOT (c IN (listquery())))#x]
+:  +- Project [e#x]
+:     +- SubqueryAlias spark_catalog.default.t_empty
+:        +- Relation spark_catalog.default.t_empty[e#x] json
++- SubqueryAlias spark_catalog.default.t
+   +- Relation spark_catalog.default.t[c#x] json
 
 
 -- !query
@@ -180,21 +114,12 @@ Project [c#x, NOT c#x IN (list#x []) AS (NOT (c IN (listquery())))#x]
 -- !query
 select null in (select e from t_empty)
 -- !query analysis
-org.apache.spark.sql.catalyst.ExtendedAnalysisException
-{
-  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
-  "sqlState" : "42P01",
-  "messageParameters" : {
-    "relationName" : "`t_empty`"
-  },
-  "queryContext" : [ {
-    "objectType" : "",
-    "objectName" : "",
-    "startIndex" : 31,
-    "stopIndex" : 37,
-    "fragment" : "t_empty"
-  } ]
-}
+Project [cast(null as int) IN (list#x []) AS (NULL IN (listquery()))#x]
+:  +- Project [e#x]
+:     +- Project [e#x]
+:        +- SubqueryAlias spark_catalog.default.t_empty
+:           +- Relation spark_catalog.default.t_empty[e#x] json
++- OneRowRelation
 
 
 -- !query
@@ -215,21 +140,12 @@ Project [cast(null as int) IN (list#x []) AS (NULL IN (listquery()))#x]
 -- !query
 select null not in (select e from t_empty)
 -- !query analysis
-org.apache.spark.sql.catalyst.ExtendedAnalysisException
-{
-  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
-  "sqlState" : "42P01",
-  "messageParameters" : {
-    "relationName" : "`t_empty`"
-  },
-  "queryContext" : [ {
-    "objectType" : "",
-    "objectName" : "",
-    "startIndex" : 35,
-    "stopIndex" : 41,
-    "fragment" : "t_empty"
-  } ]
-}
+Project [NOT cast(null as int) IN (list#x []) AS (NOT (NULL IN (listquery())))#x]
+:  +- Project [e#x]
+:     +- Project [e#x]
+:        +- SubqueryAlias spark_catalog.default.t_empty
+:           +- Relation spark_catalog.default.t_empty[e#x] json
++- OneRowRelation
 
 
 -- !query
@@ -250,41 +166,29 @@ Project [NOT cast(null as int) IN (list#x []) AS (NOT (NULL IN (listquery())))#x
 -- !query
 select * from t left join t2 on (t.c in (select e from t_empty)) is null
 -- !query analysis
-org.apache.spark.sql.catalyst.ExtendedAnalysisException
-{
-  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
-  "sqlState" : "42P01",
-  "messageParameters" : {
-    "relationName" : "`t`"
-  },
-  "queryContext" : [ {
-    "objectType" : "",
-    "objectName" : "",
-    "startIndex" : 15,
-    "stopIndex" : 15,
-    "fragment" : "t"
-  } ]
-}
+Project [c#x, d#x]
++- Join LeftOuter, isnull(c#x IN (list#x []))
+   :  +- Project [e#x]
+   :     +- SubqueryAlias spark_catalog.default.t_empty
+   :        +- Relation spark_catalog.default.t_empty[e#x] json
+   :- SubqueryAlias spark_catalog.default.t
+   :  +- Relation spark_catalog.default.t[c#x] json
+   +- SubqueryAlias spark_catalog.default.t2
+      +- Relation spark_catalog.default.t2[d#x] json
 
 
 -- !query
 select * from t left join t2 on (t.c not in (select e from t_empty)) is null
 -- !query analysis
-org.apache.spark.sql.catalyst.ExtendedAnalysisException
-{
-  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
-  "sqlState" : "42P01",
-  "messageParameters" : {
-    "relationName" : "`t`"
-  },
-  "queryContext" : [ {
-    "objectType" : "",
-    "objectName" : "",
-    "startIndex" : 15,
-    "stopIndex" : 15,
-    "fragment" : "t"
-  } ]
-}
+Project [c#x, d#x]
++- Join LeftOuter, isnull(NOT c#x IN (list#x []))
+   :  +- Project [e#x]
+   :     +- SubqueryAlias spark_catalog.default.t_empty
+   :        +- Relation spark_catalog.default.t_empty[e#x] json
+   :- SubqueryAlias spark_catalog.default.t
+   :  +- Relation spark_catalog.default.t[c#x] json
+   +- SubqueryAlias spark_catalog.default.t2
+      +- Relation spark_catalog.default.t2[d#x] json
 
 
 -- !query
@@ -296,41 +200,29 @@ SetCommand (spark.sql.optimizer.optimizeUncorrelatedInSubqueriesInJoinCondition.
 -- !query
 select * from t left join t2 on (t.c in (select e from t_empty)) is null
 -- !query analysis
-org.apache.spark.sql.catalyst.ExtendedAnalysisException
-{
-  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
-  "sqlState" : "42P01",
-  "messageParameters" : {
-    "relationName" : "`t`"
-  },
-  "queryContext" : [ {
-    "objectType" : "",
-    "objectName" : "",
-    "startIndex" : 15,
-    "stopIndex" : 15,
-    "fragment" : "t"
-  } ]
-}
+Project [c#x, d#x]
++- Join LeftOuter, isnull(c#x IN (list#x []))
+   :  +- Project [e#x]
+   :     +- SubqueryAlias spark_catalog.default.t_empty
+   :        +- Relation spark_catalog.default.t_empty[e#x] json
+   :- SubqueryAlias spark_catalog.default.t
+   :  +- Relation spark_catalog.default.t[c#x] json
+   +- SubqueryAlias spark_catalog.default.t2
+      +- Relation spark_catalog.default.t2[d#x] json
 
 
 -- !query
 select * from t left join t2 on (t.c not in (select e from t_empty)) is null
 -- !query analysis
-org.apache.spark.sql.catalyst.ExtendedAnalysisException
-{
-  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
-  "sqlState" : "42P01",
-  "messageParameters" : {
-    "relationName" : "`t`"
-  },
-  "queryContext" : [ {
-    "objectType" : "",
-    "objectName" : "",
-    "startIndex" : 15,
-    "stopIndex" : 15,
-    "fragment" : "t"
-  } ]
-}
+Project [c#x, d#x]
++- Join LeftOuter, isnull(NOT c#x IN (list#x []))
+   :  +- Project [e#x]
+   :     +- SubqueryAlias spark_catalog.default.t_empty
+   :        +- Relation spark_catalog.default.t_empty[e#x] json
+   :- SubqueryAlias spark_catalog.default.t
+   :  +- Relation spark_catalog.default.t[c#x] json
+   +- SubqueryAlias spark_catalog.default.t2
+      +- Relation spark_catalog.default.t2[d#x] json
 
 
 -- !query
@@ -348,21 +240,12 @@ SetCommand (spark.sql.optimizer.optimizeUncorrelatedInSubqueriesInJoinCondition.
 -- !query
 select null in (select e from t_empty)
 -- !query analysis
-org.apache.spark.sql.catalyst.ExtendedAnalysisException
-{
-  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
-  "sqlState" : "42P01",
-  "messageParameters" : {
-    "relationName" : "`t_empty`"
-  },
-  "queryContext" : [ {
-    "objectType" : "",
-    "objectName" : "",
-    "startIndex" : 31,
-    "stopIndex" : 37,
-    "fragment" : "t_empty"
-  } ]
-}
+Project [cast(null as int) IN (list#x []) AS (NULL IN (listquery()))#x]
+:  +- Project [e#x]
+:     +- Project [e#x]
+:        +- SubqueryAlias spark_catalog.default.t_empty
+:           +- Relation spark_catalog.default.t_empty[e#x] json
++- OneRowRelation
 
 
 -- !query
@@ -383,21 +266,12 @@ Project [cast(null as int) IN (list#x []) AS (NULL IN (listquery()))#x]
 -- !query
 select null not in (select e from t_empty)
 -- !query analysis
-org.apache.spark.sql.catalyst.ExtendedAnalysisException
-{
-  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
-  "sqlState" : "42P01",
-  "messageParameters" : {
-    "relationName" : "`t_empty`"
-  },
-  "queryContext" : [ {
-    "objectType" : "",
-    "objectName" : "",
-    "startIndex" : 35,
-    "stopIndex" : 41,
-    "fragment" : "t_empty"
-  } ]
-}
+Project [NOT cast(null as int) IN (list#x []) AS (NOT (NULL IN (listquery())))#x]
+:  +- Project [e#x]
+:     +- Project [e#x]
+:        +- SubqueryAlias spark_catalog.default.t_empty
+:           +- Relation spark_catalog.default.t_empty[e#x] json
++- OneRowRelation
 
 
 -- !query
@@ -418,41 +292,29 @@ Project [NOT cast(null as int) IN (list#x []) AS (NOT (NULL IN (listquery())))#x
 -- !query
 select * from t left join t2 on (t.c in (select e from t_empty)) is null
 -- !query analysis
-org.apache.spark.sql.catalyst.ExtendedAnalysisException
-{
-  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
-  "sqlState" : "42P01",
-  "messageParameters" : {
-    "relationName" : "`t`"
-  },
-  "queryContext" : [ {
-    "objectType" : "",
-    "objectName" : "",
-    "startIndex" : 15,
-    "stopIndex" : 15,
-    "fragment" : "t"
-  } ]
-}
+Project [c#x, d#x]
++- Join LeftOuter, isnull(c#x IN (list#x []))
+   :  +- Project [e#x]
+   :     +- SubqueryAlias spark_catalog.default.t_empty
+   :        +- Relation spark_catalog.default.t_empty[e#x] json
+   :- SubqueryAlias spark_catalog.default.t
+   :  +- Relation spark_catalog.default.t[c#x] json
+   +- SubqueryAlias spark_catalog.default.t2
+      +- Relation spark_catalog.default.t2[d#x] json
 
 
 -- !query
 select * from t left join t2 on (t.c not in (select e from t_empty)) is null
 -- !query analysis
-org.apache.spark.sql.catalyst.ExtendedAnalysisException
-{
-  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
-  "sqlState" : "42P01",
-  "messageParameters" : {
-    "relationName" : "`t`"
-  },
-  "queryContext" : [ {
-    "objectType" : "",
-    "objectName" : "",
-    "startIndex" : 15,
-    "stopIndex" : 15,
-    "fragment" : "t"
-  } ]
-}
+Project [c#x, d#x]
++- Join LeftOuter, isnull(NOT c#x IN (list#x []))
+   :  +- Project [e#x]
+   :     +- SubqueryAlias spark_catalog.default.t_empty
+   :        +- Relation spark_catalog.default.t_empty[e#x] json
+   :- SubqueryAlias spark_catalog.default.t
+   :  +- Relation spark_catalog.default.t[c#x] json
+   +- SubqueryAlias spark_catalog.default.t2
+      +- Relation spark_catalog.default.t2[d#x] json
 
 
 -- !query
@@ -470,37 +332,19 @@ ResetCommand spark.sql.optimizer.optimizeUncorrelatedInSubqueriesInJoinCondition
 -- !query
 drop table t
 -- !query analysis
-org.apache.spark.sql.catalyst.analysis.NoSuchTableException
-{
-  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
-  "sqlState" : "42P01",
-  "messageParameters" : {
-    "relationName" : "`spark_catalog`.`default`.`t`"
-  }
-}
+DropTable false, false
++- ResolvedIdentifier V2SessionCatalog(spark_catalog), default.t
 
 
 -- !query
 drop table t2
 -- !query analysis
-org.apache.spark.sql.catalyst.analysis.NoSuchTableException
-{
-  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
-  "sqlState" : "42P01",
-  "messageParameters" : {
-    "relationName" : "`spark_catalog`.`default`.`t2`"
-  }
-}
+DropTable false, false
++- ResolvedIdentifier V2SessionCatalog(spark_catalog), default.t2
 
 
 -- !query
 drop table t_empty
 -- !query analysis
-org.apache.spark.sql.catalyst.analysis.NoSuchTableException
-{
-  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
-  "sqlState" : "42P01",
-  "messageParameters" : {
-    "relationName" : "`spark_catalog`.`default`.`t_empty`"
-  }
-}
+DropTable false, false
++- ResolvedIdentifier V2SessionCatalog(spark_catalog), default.t_empty
