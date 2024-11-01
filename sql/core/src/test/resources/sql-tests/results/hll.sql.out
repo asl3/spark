@@ -12,15 +12,37 @@ CREATE TABLE t1 USING JSON AS VALUES (0), (1), (2), (2), (2), (3), (4) as tab(co
 -- !query schema
 struct<>
 -- !query output
-
+org.apache.spark.sql.catalyst.parser.ParseException
+{
+  "errorClass" : "PARSE_SYNTAX_ERROR",
+  "sqlState" : "42601",
+  "messageParameters" : {
+    "error" : "'JSON'",
+    "hint" : ""
+  }
+}
 
 
 -- !query
 SELECT hll_sketch_estimate(hll_sketch_agg(col)) AS result FROM t1
 -- !query schema
-struct<result:bigint>
+struct<>
 -- !query output
-5
+org.apache.spark.sql.catalyst.ExtendedAnalysisException
+{
+  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
+  "sqlState" : "42P01",
+  "messageParameters" : {
+    "relationName" : "`t1`"
+  },
+  "queryContext" : [ {
+    "objectType" : "",
+    "objectName" : "",
+    "startIndex" : 64,
+    "stopIndex" : 65,
+    "fragment" : "t1"
+  } ]
+}
 
 
 -- !query

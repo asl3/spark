@@ -20,7 +20,15 @@ create table t(c int) using json
 -- !query schema
 struct<>
 -- !query output
-
+org.apache.spark.sql.catalyst.parser.ParseException
+{
+  "errorClass" : "PARSE_SYNTAX_ERROR",
+  "sqlState" : "42601",
+  "messageParameters" : {
+    "error" : "'json'",
+    "hint" : ""
+  }
+}
 
 
 -- !query
@@ -28,7 +36,21 @@ insert into t values (1), (null)
 -- !query schema
 struct<>
 -- !query output
-
+org.apache.spark.sql.catalyst.ExtendedAnalysisException
+{
+  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
+  "sqlState" : "42P01",
+  "messageParameters" : {
+    "relationName" : "`t`"
+  },
+  "queryContext" : [ {
+    "objectType" : "",
+    "objectName" : "",
+    "startIndex" : 13,
+    "stopIndex" : 13,
+    "fragment" : "t"
+  } ]
+}
 
 
 -- !query
@@ -36,7 +58,15 @@ create table t2(d int) using json
 -- !query schema
 struct<>
 -- !query output
-
+org.apache.spark.sql.catalyst.parser.ParseException
+{
+  "errorClass" : "PARSE_SYNTAX_ERROR",
+  "sqlState" : "42601",
+  "messageParameters" : {
+    "error" : "'json'",
+    "hint" : ""
+  }
+}
 
 
 -- !query
@@ -44,7 +74,21 @@ insert into t2 values (2)
 -- !query schema
 struct<>
 -- !query output
-
+org.apache.spark.sql.catalyst.ExtendedAnalysisException
+{
+  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
+  "sqlState" : "42P01",
+  "messageParameters" : {
+    "relationName" : "`t2`"
+  },
+  "queryContext" : [ {
+    "objectType" : "",
+    "objectName" : "",
+    "startIndex" : 13,
+    "stopIndex" : 14,
+    "fragment" : "t2"
+  } ]
+}
 
 
 -- !query
@@ -52,7 +96,15 @@ create table t_empty(e int) using json
 -- !query schema
 struct<>
 -- !query output
-
+org.apache.spark.sql.catalyst.parser.ParseException
+{
+  "errorClass" : "PARSE_SYNTAX_ERROR",
+  "sqlState" : "42601",
+  "messageParameters" : {
+    "error" : "'json'",
+    "hint" : ""
+  }
+}
 
 
 -- !query
@@ -66,10 +118,23 @@ spark.sql.legacy.nullInEmptyListBehavior	false
 -- !query
 select c, c in (select e from t_empty) from t
 -- !query schema
-struct<c:int,(c IN (listquery())):boolean>
+struct<>
 -- !query output
-1	false
-NULL	false
+org.apache.spark.sql.catalyst.ExtendedAnalysisException
+{
+  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
+  "sqlState" : "42P01",
+  "messageParameters" : {
+    "relationName" : "`t`"
+  },
+  "queryContext" : [ {
+    "objectType" : "",
+    "objectName" : "",
+    "startIndex" : 45,
+    "stopIndex" : 45,
+    "fragment" : "t"
+  } ]
+}
 
 
 -- !query
@@ -84,10 +149,23 @@ NULL	false
 -- !query
 select c, c not in (select e from t_empty) from t
 -- !query schema
-struct<c:int,(NOT (c IN (listquery()))):boolean>
+struct<>
 -- !query output
-1	true
-NULL	true
+org.apache.spark.sql.catalyst.ExtendedAnalysisException
+{
+  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
+  "sqlState" : "42P01",
+  "messageParameters" : {
+    "relationName" : "`t`"
+  },
+  "queryContext" : [ {
+    "objectType" : "",
+    "objectName" : "",
+    "startIndex" : 49,
+    "stopIndex" : 49,
+    "fragment" : "t"
+  } ]
+}
 
 
 -- !query
@@ -102,9 +180,23 @@ NULL	true
 -- !query
 select null in (select e from t_empty)
 -- !query schema
-struct<(NULL IN (listquery())):boolean>
+struct<>
 -- !query output
-false
+org.apache.spark.sql.catalyst.ExtendedAnalysisException
+{
+  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
+  "sqlState" : "42P01",
+  "messageParameters" : {
+    "relationName" : "`t_empty`"
+  },
+  "queryContext" : [ {
+    "objectType" : "",
+    "objectName" : "",
+    "startIndex" : 31,
+    "stopIndex" : 37,
+    "fragment" : "t_empty"
+  } ]
+}
 
 
 -- !query
@@ -118,9 +210,23 @@ false
 -- !query
 select null not in (select e from t_empty)
 -- !query schema
-struct<(NOT (NULL IN (listquery()))):boolean>
+struct<>
 -- !query output
-true
+org.apache.spark.sql.catalyst.ExtendedAnalysisException
+{
+  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
+  "sqlState" : "42P01",
+  "messageParameters" : {
+    "relationName" : "`t_empty`"
+  },
+  "queryContext" : [ {
+    "objectType" : "",
+    "objectName" : "",
+    "startIndex" : 35,
+    "stopIndex" : 41,
+    "fragment" : "t_empty"
+  } ]
+}
 
 
 -- !query
@@ -134,19 +240,45 @@ true
 -- !query
 select * from t left join t2 on (t.c in (select e from t_empty)) is null
 -- !query schema
-struct<c:int,d:int>
+struct<>
 -- !query output
-1	NULL
-NULL	NULL
+org.apache.spark.sql.catalyst.ExtendedAnalysisException
+{
+  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
+  "sqlState" : "42P01",
+  "messageParameters" : {
+    "relationName" : "`t`"
+  },
+  "queryContext" : [ {
+    "objectType" : "",
+    "objectName" : "",
+    "startIndex" : 15,
+    "stopIndex" : 15,
+    "fragment" : "t"
+  } ]
+}
 
 
 -- !query
 select * from t left join t2 on (t.c not in (select e from t_empty)) is null
 -- !query schema
-struct<c:int,d:int>
+struct<>
 -- !query output
-1	NULL
-NULL	NULL
+org.apache.spark.sql.catalyst.ExtendedAnalysisException
+{
+  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
+  "sqlState" : "42P01",
+  "messageParameters" : {
+    "relationName" : "`t`"
+  },
+  "queryContext" : [ {
+    "objectType" : "",
+    "objectName" : "",
+    "startIndex" : 15,
+    "stopIndex" : 15,
+    "fragment" : "t"
+  } ]
+}
 
 
 -- !query
@@ -160,19 +292,45 @@ spark.sql.optimizer.optimizeUncorrelatedInSubqueriesInJoinCondition.enabled	true
 -- !query
 select * from t left join t2 on (t.c in (select e from t_empty)) is null
 -- !query schema
-struct<c:int,d:int>
+struct<>
 -- !query output
-1	NULL
-NULL	NULL
+org.apache.spark.sql.catalyst.ExtendedAnalysisException
+{
+  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
+  "sqlState" : "42P01",
+  "messageParameters" : {
+    "relationName" : "`t`"
+  },
+  "queryContext" : [ {
+    "objectType" : "",
+    "objectName" : "",
+    "startIndex" : 15,
+    "stopIndex" : 15,
+    "fragment" : "t"
+  } ]
+}
 
 
 -- !query
 select * from t left join t2 on (t.c not in (select e from t_empty)) is null
 -- !query schema
-struct<c:int,d:int>
+struct<>
 -- !query output
-1	NULL
-NULL	NULL
+org.apache.spark.sql.catalyst.ExtendedAnalysisException
+{
+  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
+  "sqlState" : "42P01",
+  "messageParameters" : {
+    "relationName" : "`t`"
+  },
+  "queryContext" : [ {
+    "objectType" : "",
+    "objectName" : "",
+    "startIndex" : 15,
+    "stopIndex" : 15,
+    "fragment" : "t"
+  } ]
+}
 
 
 -- !query
@@ -194,9 +352,23 @@ spark.sql.optimizer.optimizeUncorrelatedInSubqueriesInJoinCondition.enabled	fals
 -- !query
 select null in (select e from t_empty)
 -- !query schema
-struct<(NULL IN (listquery())):boolean>
+struct<>
 -- !query output
-NULL
+org.apache.spark.sql.catalyst.ExtendedAnalysisException
+{
+  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
+  "sqlState" : "42P01",
+  "messageParameters" : {
+    "relationName" : "`t_empty`"
+  },
+  "queryContext" : [ {
+    "objectType" : "",
+    "objectName" : "",
+    "startIndex" : 31,
+    "stopIndex" : 37,
+    "fragment" : "t_empty"
+  } ]
+}
 
 
 -- !query
@@ -210,9 +382,23 @@ NULL
 -- !query
 select null not in (select e from t_empty)
 -- !query schema
-struct<(NOT (NULL IN (listquery()))):boolean>
+struct<>
 -- !query output
-NULL
+org.apache.spark.sql.catalyst.ExtendedAnalysisException
+{
+  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
+  "sqlState" : "42P01",
+  "messageParameters" : {
+    "relationName" : "`t_empty`"
+  },
+  "queryContext" : [ {
+    "objectType" : "",
+    "objectName" : "",
+    "startIndex" : 35,
+    "stopIndex" : 41,
+    "fragment" : "t_empty"
+  } ]
+}
 
 
 -- !query
@@ -226,19 +412,45 @@ NULL
 -- !query
 select * from t left join t2 on (t.c in (select e from t_empty)) is null
 -- !query schema
-struct<c:int,d:int>
+struct<>
 -- !query output
-1	NULL
-NULL	2
+org.apache.spark.sql.catalyst.ExtendedAnalysisException
+{
+  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
+  "sqlState" : "42P01",
+  "messageParameters" : {
+    "relationName" : "`t`"
+  },
+  "queryContext" : [ {
+    "objectType" : "",
+    "objectName" : "",
+    "startIndex" : 15,
+    "stopIndex" : 15,
+    "fragment" : "t"
+  } ]
+}
 
 
 -- !query
 select * from t left join t2 on (t.c not in (select e from t_empty)) is null
 -- !query schema
-struct<c:int,d:int>
+struct<>
 -- !query output
-1	NULL
-NULL	2
+org.apache.spark.sql.catalyst.ExtendedAnalysisException
+{
+  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
+  "sqlState" : "42P01",
+  "messageParameters" : {
+    "relationName" : "`t`"
+  },
+  "queryContext" : [ {
+    "objectType" : "",
+    "objectName" : "",
+    "startIndex" : 15,
+    "stopIndex" : 15,
+    "fragment" : "t"
+  } ]
+}
 
 
 -- !query
@@ -262,7 +474,14 @@ drop table t
 -- !query schema
 struct<>
 -- !query output
-
+org.apache.spark.sql.catalyst.analysis.NoSuchTableException
+{
+  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
+  "sqlState" : "42P01",
+  "messageParameters" : {
+    "relationName" : "`spark_catalog`.`default`.`t`"
+  }
+}
 
 
 -- !query
@@ -270,7 +489,14 @@ drop table t2
 -- !query schema
 struct<>
 -- !query output
-
+org.apache.spark.sql.catalyst.analysis.NoSuchTableException
+{
+  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
+  "sqlState" : "42P01",
+  "messageParameters" : {
+    "relationName" : "`spark_catalog`.`default`.`t2`"
+  }
+}
 
 
 -- !query
@@ -278,4 +504,11 @@ drop table t_empty
 -- !query schema
 struct<>
 -- !query output
-
+org.apache.spark.sql.catalyst.analysis.NoSuchTableException
+{
+  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
+  "sqlState" : "42P01",
+  "messageParameters" : {
+    "relationName" : "`spark_catalog`.`default`.`t_empty`"
+  }
+}

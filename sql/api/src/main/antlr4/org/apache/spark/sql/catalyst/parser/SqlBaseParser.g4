@@ -349,6 +349,10 @@ executeImmediateArgumentSeq
     : executeImmediateArgument (COMMA executeImmediateArgument)*
     ;
 
+asJsonOption
+    : AS JSON
+    ;
+
 timezone
     : stringLit
     | LOCAL
@@ -1651,7 +1655,6 @@ ansiNonReserved
     | INVOKER
     | ITEMS
     | ITERATE
-    | JSON
     | KEYS
     | LANGUAGE
     | LAST
@@ -2010,7 +2013,6 @@ nonReserved
     | IS
     | ITEMS
     | ITERATE
-    | JSON
     | KEYS
     | LANGUAGE
     | LAST

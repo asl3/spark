@@ -16,149 +16,229 @@ DropTable true, false
 -- !query
 create table x(x1 int, x2 int) using json
 -- !query analysis
-CreateDataSourceTableCommand `spark_catalog`.`default`.`x`, false
+org.apache.spark.sql.catalyst.parser.ParseException
+{
+  "errorClass" : "PARSE_SYNTAX_ERROR",
+  "sqlState" : "42601",
+  "messageParameters" : {
+    "error" : "'json'",
+    "hint" : ""
+  }
+}
 
 
 -- !query
 insert into x values (1, 1), (2, 2)
 -- !query analysis
-InsertIntoHadoopFsRelationCommand file:[not included in comparison]/{warehouse_dir}/x, false, JSON, [path=file:[not included in comparison]/{warehouse_dir}/x], Append, `spark_catalog`.`default`.`x`, org.apache.spark.sql.execution.datasources.InMemoryFileIndex(file:[not included in comparison]/{warehouse_dir}/x), [x1, x2]
-+- Project [cast(col1#x as int) AS x1#x, cast(col2#x as int) AS x2#x]
-   +- LocalRelation [col1#x, col2#x]
+org.apache.spark.sql.catalyst.ExtendedAnalysisException
+{
+  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
+  "sqlState" : "42P01",
+  "messageParameters" : {
+    "relationName" : "`x`"
+  },
+  "queryContext" : [ {
+    "objectType" : "",
+    "objectName" : "",
+    "startIndex" : 13,
+    "stopIndex" : 13,
+    "fragment" : "x"
+  } ]
+}
 
 
 -- !query
 create table y(y1 int, y2 int) using json
 -- !query analysis
-CreateDataSourceTableCommand `spark_catalog`.`default`.`y`, false
+org.apache.spark.sql.catalyst.parser.ParseException
+{
+  "errorClass" : "PARSE_SYNTAX_ERROR",
+  "sqlState" : "42601",
+  "messageParameters" : {
+    "error" : "'json'",
+    "hint" : ""
+  }
+}
 
 
 -- !query
 insert into y values (1, 1), (1, 2), (2, 4)
 -- !query analysis
-InsertIntoHadoopFsRelationCommand file:[not included in comparison]/{warehouse_dir}/y, false, JSON, [path=file:[not included in comparison]/{warehouse_dir}/y], Append, `spark_catalog`.`default`.`y`, org.apache.spark.sql.execution.datasources.InMemoryFileIndex(file:[not included in comparison]/{warehouse_dir}/y), [y1, y2]
-+- Project [cast(col1#x as int) AS y1#x, cast(col2#x as int) AS y2#x]
-   +- LocalRelation [col1#x, col2#x]
+org.apache.spark.sql.catalyst.ExtendedAnalysisException
+{
+  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
+  "sqlState" : "42P01",
+  "messageParameters" : {
+    "relationName" : "`y`"
+  },
+  "queryContext" : [ {
+    "objectType" : "",
+    "objectName" : "",
+    "startIndex" : 13,
+    "stopIndex" : 13,
+    "fragment" : "y"
+  } ]
+}
 
 
 -- !query
 select * from x where exists (select * from y where x1 = y1 limit 1 offset 2)
 -- !query analysis
-Project [x1#x, x2#x]
-+- Filter exists#x [x1#x]
-   :  +- GlobalLimit 1
-   :     +- LocalLimit 1
-   :        +- Offset 2
-   :           +- Project [y1#x, y2#x]
-   :              +- Filter (outer(x1#x) = y1#x)
-   :                 +- SubqueryAlias spark_catalog.default.y
-   :                    +- Relation spark_catalog.default.y[y1#x,y2#x] json
-   +- SubqueryAlias spark_catalog.default.x
-      +- Relation spark_catalog.default.x[x1#x,x2#x] json
+org.apache.spark.sql.catalyst.ExtendedAnalysisException
+{
+  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
+  "sqlState" : "42P01",
+  "messageParameters" : {
+    "relationName" : "`x`"
+  },
+  "queryContext" : [ {
+    "objectType" : "",
+    "objectName" : "",
+    "startIndex" : 15,
+    "stopIndex" : 15,
+    "fragment" : "x"
+  } ]
+}
 
 
 -- !query
 select * from x join lateral (select * from y where x1 = y1 limit 1 offset 2)
 -- !query analysis
-Project [x1#x, x2#x, y1#x, y2#x]
-+- LateralJoin lateral-subquery#x [x1#x], Inner
-   :  +- SubqueryAlias __auto_generated_subquery_name
-   :     +- GlobalLimit 1
-   :        +- LocalLimit 1
-   :           +- Offset 2
-   :              +- Project [y1#x, y2#x]
-   :                 +- Filter (outer(x1#x) = y1#x)
-   :                    +- SubqueryAlias spark_catalog.default.y
-   :                       +- Relation spark_catalog.default.y[y1#x,y2#x] json
-   +- SubqueryAlias spark_catalog.default.x
-      +- Relation spark_catalog.default.x[x1#x,x2#x] json
+org.apache.spark.sql.catalyst.ExtendedAnalysisException
+{
+  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
+  "sqlState" : "42P01",
+  "messageParameters" : {
+    "relationName" : "`x`"
+  },
+  "queryContext" : [ {
+    "objectType" : "",
+    "objectName" : "",
+    "startIndex" : 15,
+    "stopIndex" : 15,
+    "fragment" : "x"
+  } ]
+}
 
 
 -- !query
 select * from x where x1 in (select y1 from y limit 1 offset 2)
 -- !query analysis
-Project [x1#x, x2#x]
-+- Filter x1#x IN (list#x [])
-   :  +- GlobalLimit 1
-   :     +- LocalLimit 1
-   :        +- Offset 2
-   :           +- Project [y1#x]
-   :              +- SubqueryAlias spark_catalog.default.y
-   :                 +- Relation spark_catalog.default.y[y1#x,y2#x] json
-   +- SubqueryAlias spark_catalog.default.x
-      +- Relation spark_catalog.default.x[x1#x,x2#x] json
+org.apache.spark.sql.catalyst.ExtendedAnalysisException
+{
+  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
+  "sqlState" : "42P01",
+  "messageParameters" : {
+    "relationName" : "`x`"
+  },
+  "queryContext" : [ {
+    "objectType" : "",
+    "objectName" : "",
+    "startIndex" : 15,
+    "stopIndex" : 15,
+    "fragment" : "x"
+  } ]
+}
 
 
 -- !query
 select * from x where (select sum(y2) from y where x1 = y1 limit 1 offset 2) > 2
 -- !query analysis
-Project [x1#x, x2#x]
-+- Filter (scalar-subquery#x [x1#x] > cast(2 as bigint))
-   :  +- GlobalLimit 1
-   :     +- LocalLimit 1
-   :        +- Offset 2
-   :           +- Aggregate [sum(y2#x) AS sum(y2)#xL]
-   :              +- Filter (outer(x1#x) = y1#x)
-   :                 +- SubqueryAlias spark_catalog.default.y
-   :                    +- Relation spark_catalog.default.y[y1#x,y2#x] json
-   +- SubqueryAlias spark_catalog.default.x
-      +- Relation spark_catalog.default.x[x1#x,x2#x] json
+org.apache.spark.sql.catalyst.ExtendedAnalysisException
+{
+  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
+  "sqlState" : "42P01",
+  "messageParameters" : {
+    "relationName" : "`x`"
+  },
+  "queryContext" : [ {
+    "objectType" : "",
+    "objectName" : "",
+    "startIndex" : 15,
+    "stopIndex" : 15,
+    "fragment" : "x"
+  } ]
+}
 
 
 -- !query
 select * from x where exists (select * from y where x1 = y1 offset 2)
 -- !query analysis
-Project [x1#x, x2#x]
-+- Filter exists#x [x1#x]
-   :  +- Offset 2
-   :     +- Project [y1#x, y2#x]
-   :        +- Filter (outer(x1#x) = y1#x)
-   :           +- SubqueryAlias spark_catalog.default.y
-   :              +- Relation spark_catalog.default.y[y1#x,y2#x] json
-   +- SubqueryAlias spark_catalog.default.x
-      +- Relation spark_catalog.default.x[x1#x,x2#x] json
+org.apache.spark.sql.catalyst.ExtendedAnalysisException
+{
+  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
+  "sqlState" : "42P01",
+  "messageParameters" : {
+    "relationName" : "`x`"
+  },
+  "queryContext" : [ {
+    "objectType" : "",
+    "objectName" : "",
+    "startIndex" : 15,
+    "stopIndex" : 15,
+    "fragment" : "x"
+  } ]
+}
 
 
 -- !query
 select * from x join lateral (select * from y where x1 = y1 offset 2)
 -- !query analysis
-Project [x1#x, x2#x, y1#x, y2#x]
-+- LateralJoin lateral-subquery#x [x1#x], Inner
-   :  +- SubqueryAlias __auto_generated_subquery_name
-   :     +- Offset 2
-   :        +- Project [y1#x, y2#x]
-   :           +- Filter (outer(x1#x) = y1#x)
-   :              +- SubqueryAlias spark_catalog.default.y
-   :                 +- Relation spark_catalog.default.y[y1#x,y2#x] json
-   +- SubqueryAlias spark_catalog.default.x
-      +- Relation spark_catalog.default.x[x1#x,x2#x] json
+org.apache.spark.sql.catalyst.ExtendedAnalysisException
+{
+  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
+  "sqlState" : "42P01",
+  "messageParameters" : {
+    "relationName" : "`x`"
+  },
+  "queryContext" : [ {
+    "objectType" : "",
+    "objectName" : "",
+    "startIndex" : 15,
+    "stopIndex" : 15,
+    "fragment" : "x"
+  } ]
+}
 
 
 -- !query
 select * from x where x1 in (select y1 from y offset 2)
 -- !query analysis
-Project [x1#x, x2#x]
-+- Filter x1#x IN (list#x [])
-   :  +- Offset 2
-   :     +- Project [y1#x]
-   :        +- SubqueryAlias spark_catalog.default.y
-   :           +- Relation spark_catalog.default.y[y1#x,y2#x] json
-   +- SubqueryAlias spark_catalog.default.x
-      +- Relation spark_catalog.default.x[x1#x,x2#x] json
+org.apache.spark.sql.catalyst.ExtendedAnalysisException
+{
+  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
+  "sqlState" : "42P01",
+  "messageParameters" : {
+    "relationName" : "`x`"
+  },
+  "queryContext" : [ {
+    "objectType" : "",
+    "objectName" : "",
+    "startIndex" : 15,
+    "stopIndex" : 15,
+    "fragment" : "x"
+  } ]
+}
 
 
 -- !query
 select * from x where (select sum(y2) from y where x1 = y1 offset 2) > 2
 -- !query analysis
-Project [x1#x, x2#x]
-+- Filter (scalar-subquery#x [x1#x] > cast(2 as bigint))
-   :  +- Offset 2
-   :     +- Aggregate [sum(y2#x) AS sum(y2)#xL]
-   :        +- Filter (outer(x1#x) = y1#x)
-   :           +- SubqueryAlias spark_catalog.default.y
-   :              +- Relation spark_catalog.default.y[y1#x,y2#x] json
-   +- SubqueryAlias spark_catalog.default.x
-      +- Relation spark_catalog.default.x[x1#x,x2#x] json
+org.apache.spark.sql.catalyst.ExtendedAnalysisException
+{
+  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
+  "sqlState" : "42P01",
+  "messageParameters" : {
+    "relationName" : "`x`"
+  },
+  "queryContext" : [ {
+    "objectType" : "",
+    "objectName" : "",
+    "startIndex" : 15,
+    "stopIndex" : 15,
+    "fragment" : "x"
+  } ]
+}
 
 
 -- !query
@@ -348,12 +428,24 @@ Project [emp_name#x]
 -- !query
 drop table x
 -- !query analysis
-DropTable false, false
-+- ResolvedIdentifier V2SessionCatalog(spark_catalog), default.x
+org.apache.spark.sql.catalyst.analysis.NoSuchTableException
+{
+  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
+  "sqlState" : "42P01",
+  "messageParameters" : {
+    "relationName" : "`spark_catalog`.`default`.`x`"
+  }
+}
 
 
 -- !query
 drop table y
 -- !query analysis
-DropTable false, false
-+- ResolvedIdentifier V2SessionCatalog(spark_catalog), default.y
+org.apache.spark.sql.catalyst.analysis.NoSuchTableException
+{
+  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
+  "sqlState" : "42P01",
+  "messageParameters" : {
+    "relationName" : "`spark_catalog`.`default`.`y`"
+  }
+}

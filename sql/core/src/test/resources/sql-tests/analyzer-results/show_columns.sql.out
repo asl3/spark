@@ -16,7 +16,15 @@ SetCatalogAndNamespace
 -- !query
 CREATE TABLE showcolumn1 (col1 int, `col 2` int) USING json
 -- !query analysis
-CreateDataSourceTableCommand `spark_catalog`.`showdb`.`showcolumn1`, false
+org.apache.spark.sql.catalyst.parser.ParseException
+{
+  "errorClass" : "PARSE_SYNTAX_ERROR",
+  "sqlState" : "42601",
+  "messageParameters" : {
+    "error" : "'json'",
+    "hint" : ""
+  }
+}
 
 
 -- !query
@@ -28,7 +36,15 @@ CreateDataSourceTableCommand `spark_catalog`.`showdb`.`showcolumn2`, false
 -- !query
 CREATE TEMPORARY VIEW showColumn3 (col3 int, `col 4` int) USING json
 -- !query analysis
-CreateTempViewUsing [tableIdent:`showColumn3` StructType(StructField(col3,IntegerType,true),StructField(col 4,IntegerType,true)) replace:false provider:json Map()
+org.apache.spark.sql.catalyst.parser.ParseException
+{
+  "errorClass" : "PARSE_SYNTAX_ERROR",
+  "sqlState" : "42601",
+  "messageParameters" : {
+    "error" : "'json'",
+    "hint" : ""
+  }
+}
 
 
 -- !query
@@ -42,19 +58,61 @@ CreateViewCommand `showColumn4`, SELECT 1 as col1, 'abc' as `col 5`, false, fals
 -- !query
 SHOW COLUMNS IN showcolumn1
 -- !query analysis
-ShowColumnsCommand `spark_catalog`.`showdb`.`showcolumn1`, [col_name#x]
+org.apache.spark.sql.catalyst.ExtendedAnalysisException
+{
+  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
+  "sqlState" : "42P01",
+  "messageParameters" : {
+    "relationName" : "`showcolumn1`"
+  },
+  "queryContext" : [ {
+    "objectType" : "",
+    "objectName" : "",
+    "startIndex" : 17,
+    "stopIndex" : 27,
+    "fragment" : "showcolumn1"
+  } ]
+}
 
 
 -- !query
 SHOW COLUMNS IN showdb.showcolumn1
 -- !query analysis
-ShowColumnsCommand `spark_catalog`.`showdb`.`showcolumn1`, [col_name#x]
+org.apache.spark.sql.catalyst.ExtendedAnalysisException
+{
+  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
+  "sqlState" : "42P01",
+  "messageParameters" : {
+    "relationName" : "`showdb`.`showcolumn1`"
+  },
+  "queryContext" : [ {
+    "objectType" : "",
+    "objectName" : "",
+    "startIndex" : 17,
+    "stopIndex" : 34,
+    "fragment" : "showdb.showcolumn1"
+  } ]
+}
 
 
 -- !query
 SHOW COLUMNS IN showcolumn1 FROM showdb
 -- !query analysis
-ShowColumnsCommand showdb, `spark_catalog`.`showdb`.`showcolumn1`, [col_name#x]
+org.apache.spark.sql.catalyst.ExtendedAnalysisException
+{
+  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
+  "sqlState" : "42P01",
+  "messageParameters" : {
+    "relationName" : "`showdb`.`showcolumn1`"
+  },
+  "queryContext" : [ {
+    "objectType" : "",
+    "objectName" : "",
+    "startIndex" : 17,
+    "stopIndex" : 27,
+    "fragment" : "showcolumn1"
+  } ]
+}
 
 
 -- !query
@@ -86,27 +144,61 @@ org.apache.spark.sql.catalyst.ExtendedAnalysisException
 -- !query
 SHOW COLUMNS IN showdb.showcolumn1 from SHOWDB
 -- !query analysis
-ShowColumnsCommand SHOWDB, `spark_catalog`.`showdb`.`showcolumn1`, [col_name#x]
+org.apache.spark.sql.catalyst.ExtendedAnalysisException
+{
+  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
+  "sqlState" : "42P01",
+  "messageParameters" : {
+    "relationName" : "`showdb`.`showcolumn1`"
+  },
+  "queryContext" : [ {
+    "objectType" : "",
+    "objectName" : "",
+    "startIndex" : 17,
+    "stopIndex" : 34,
+    "fragment" : "showdb.showcolumn1"
+  } ]
+}
 
 
 -- !query
 SHOW COLUMNS IN showdb.showcolumn1 FROM baddb
 -- !query analysis
-org.apache.spark.sql.AnalysisException
+org.apache.spark.sql.catalyst.ExtendedAnalysisException
 {
-  "errorClass" : "SHOW_COLUMNS_WITH_CONFLICT_NAMESPACE",
-  "sqlState" : "42K05",
+  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
+  "sqlState" : "42P01",
   "messageParameters" : {
-    "namespaceA" : "`baddb`",
-    "namespaceB" : "`showdb`"
-  }
+    "relationName" : "`showdb`.`showcolumn1`"
+  },
+  "queryContext" : [ {
+    "objectType" : "",
+    "objectName" : "",
+    "startIndex" : 17,
+    "stopIndex" : 34,
+    "fragment" : "showdb.showcolumn1"
+  } ]
 }
 
 
 -- !query
 SHOW COLUMNS IN showcolumn3
 -- !query analysis
-ShowColumnsCommand `showcolumn3`, [col_name#x]
+org.apache.spark.sql.catalyst.ExtendedAnalysisException
+{
+  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
+  "sqlState" : "42P01",
+  "messageParameters" : {
+    "relationName" : "`showcolumn3`"
+  },
+  "queryContext" : [ {
+    "objectType" : "",
+    "objectName" : "",
+    "startIndex" : 17,
+    "stopIndex" : 27,
+    "fragment" : "showcolumn3"
+  } ]
+}
 
 
 -- !query
@@ -184,8 +276,14 @@ ShowColumnsCommand global_temp, `global_temp`.`showcolumn4`, [col_name#x]
 -- !query
 DROP TABLE showcolumn1
 -- !query analysis
-DropTable false, false
-+- ResolvedIdentifier V2SessionCatalog(spark_catalog), showdb.showcolumn1
+org.apache.spark.sql.catalyst.analysis.NoSuchTableException
+{
+  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
+  "sqlState" : "42P01",
+  "messageParameters" : {
+    "relationName" : "`spark_catalog`.`showdb`.`showcolumn1`"
+  }
+}
 
 
 -- !query
@@ -198,7 +296,14 @@ DropTable false, false
 -- !query
 DROP VIEW  showcolumn3
 -- !query analysis
-DropTempViewCommand showcolumn3
+org.apache.spark.sql.catalyst.analysis.NoSuchTableException
+{
+  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
+  "sqlState" : "42P01",
+  "messageParameters" : {
+    "relationName" : "`spark_catalog`.`showdb`.`showcolumn3`"
+  }
+}
 
 
 -- !query

@@ -53,31 +53,37 @@ AlterTableAddPartitionCommand `spark_catalog`.`default`.`t`, [(Map(c -> Us, d ->
 -- !query
 DESCRIBE t
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`default`.`t`, false, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`default`.`t`, false, false, [col_name#x, data_type#x, comment#x]
+
+
+-- !query
+DESCRIBE t AS JSON
+-- !query analysis
+DescribeTableCommand `spark_catalog`.`default`.`t`, false, true, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
 DESC default.t
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`default`.`t`, false, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`default`.`t`, false, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
 DESC TABLE t
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`default`.`t`, false, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`default`.`t`, false, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
 DESC FORMATTED t
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`default`.`t`, true, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`default`.`t`, true, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
 DESC EXTENDED t
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`default`.`t`, true, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`default`.`t`, true, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
@@ -89,7 +95,7 @@ AlterTableUnsetPropertiesCommand `spark_catalog`.`default`.`t`, [e], false, fals
 -- !query
 DESC EXTENDED t
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`default`.`t`, true, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`default`.`t`, true, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
@@ -101,31 +107,31 @@ AlterTableUnsetPropertiesCommand `spark_catalog`.`default`.`t`, [comment], false
 -- !query
 DESC EXTENDED t
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`default`.`t`, true, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`default`.`t`, true, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
 DESC t PARTITION (c='Us', d=1)
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`default`.`t`, [c=Us, d=1], false, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`default`.`t`, [c=Us, d=1], false, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
 DESC EXTENDED t PARTITION (c='Us', d=1)
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`default`.`t`, [c=Us, d=1], true, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`default`.`t`, [c=Us, d=1], true, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
 DESC FORMATTED t PARTITION (c='Us', d=1)
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`default`.`t`, [c=Us, d=1], true, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`default`.`t`, [c=Us, d=1], true, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
 DESC EXTENDED t PARTITION (C='Us', D=1)
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`default`.`t`, [C=Us, D=1], true, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`default`.`t`, [C=Us, D=1], true, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
@@ -179,31 +185,31 @@ org.apache.spark.sql.catalyst.parser.ParseException
 -- !query
 DESC temp_v
 -- !query analysis
-DescribeTableCommand `temp_v`, false, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `temp_v`, false, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
 DESC TABLE temp_v
 -- !query analysis
-DescribeTableCommand `temp_v`, false, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `temp_v`, false, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
 DESC FORMATTED temp_v
 -- !query analysis
-DescribeTableCommand `temp_v`, true, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `temp_v`, true, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
 DESC EXTENDED temp_v
 -- !query analysis
-DescribeTableCommand `temp_v`, true, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `temp_v`, true, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
 DESC temp_Data_Source_View
 -- !query analysis
-DescribeTableCommand `temp_Data_Source_View`, false, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `temp_Data_Source_View`, false, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
@@ -224,25 +230,25 @@ org.apache.spark.sql.AnalysisException
 -- !query
 DESC v
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`default`.`v`, false, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`default`.`v`, false, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
 DESC TABLE v
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`default`.`v`, false, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`default`.`v`, false, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
 DESC FORMATTED v
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`default`.`v`, true, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`default`.`v`, true, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
 DESC EXTENDED v
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`default`.`v`, true, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`default`.`v`, true, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
@@ -331,25 +337,25 @@ org.apache.spark.sql.catalyst.analysis.TableAlreadyExistsException
 -- !query
 DESC d
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`default`.`d`, false, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`default`.`d`, false, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
 DESC EXTENDED d
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`default`.`d`, true, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`default`.`d`, true, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
 DESC TABLE EXTENDED d
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`default`.`d`, true, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`default`.`d`, true, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
 DESC FORMATTED d
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`default`.`d`, true, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`default`.`d`, true, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
@@ -368,22 +374,22 @@ org.apache.spark.sql.catalyst.analysis.TableAlreadyExistsException
 -- !query
 DESC e
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`default`.`e`, false, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`default`.`e`, false, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
 DESC EXTENDED e
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`default`.`e`, true, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`default`.`e`, true, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
 DESC TABLE EXTENDED e
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`default`.`e`, true, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`default`.`e`, true, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
 DESC FORMATTED e
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`default`.`e`, true, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`default`.`e`, true, false, [col_name#x, data_type#x, comment#x]

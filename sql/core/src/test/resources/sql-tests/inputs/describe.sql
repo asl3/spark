@@ -21,6 +21,8 @@ ALTER TABLE t ADD PARTITION (c='Us', d=1);
 
 DESCRIBE t;
 
+DESCRIBE t AS JSON;
+
 DESC default.t;
 
 DESC TABLE t;

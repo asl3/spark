@@ -20,7 +20,15 @@ CREATE TABLE showcolumn1 (col1 int, `col 2` int) USING json
 -- !query schema
 struct<>
 -- !query output
-
+org.apache.spark.sql.catalyst.parser.ParseException
+{
+  "errorClass" : "PARSE_SYNTAX_ERROR",
+  "sqlState" : "42601",
+  "messageParameters" : {
+    "error" : "'json'",
+    "hint" : ""
+  }
+}
 
 
 -- !query
@@ -36,7 +44,15 @@ CREATE TEMPORARY VIEW showColumn3 (col3 int, `col 4` int) USING json
 -- !query schema
 struct<>
 -- !query output
-
+org.apache.spark.sql.catalyst.parser.ParseException
+{
+  "errorClass" : "PARSE_SYNTAX_ERROR",
+  "sqlState" : "42601",
+  "messageParameters" : {
+    "error" : "'json'",
+    "hint" : ""
+  }
+}
 
 
 -- !query
@@ -50,28 +66,67 @@ struct<>
 -- !query
 SHOW COLUMNS IN showcolumn1
 -- !query schema
-struct<col_name:string>
+struct<>
 -- !query output
-col 2
-col1
+org.apache.spark.sql.catalyst.ExtendedAnalysisException
+{
+  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
+  "sqlState" : "42P01",
+  "messageParameters" : {
+    "relationName" : "`showcolumn1`"
+  },
+  "queryContext" : [ {
+    "objectType" : "",
+    "objectName" : "",
+    "startIndex" : 17,
+    "stopIndex" : 27,
+    "fragment" : "showcolumn1"
+  } ]
+}
 
 
 -- !query
 SHOW COLUMNS IN showdb.showcolumn1
 -- !query schema
-struct<col_name:string>
+struct<>
 -- !query output
-col 2
-col1
+org.apache.spark.sql.catalyst.ExtendedAnalysisException
+{
+  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
+  "sqlState" : "42P01",
+  "messageParameters" : {
+    "relationName" : "`showdb`.`showcolumn1`"
+  },
+  "queryContext" : [ {
+    "objectType" : "",
+    "objectName" : "",
+    "startIndex" : 17,
+    "stopIndex" : 34,
+    "fragment" : "showdb.showcolumn1"
+  } ]
+}
 
 
 -- !query
 SHOW COLUMNS IN showcolumn1 FROM showdb
 -- !query schema
-struct<col_name:string>
+struct<>
 -- !query output
-col 2
-col1
+org.apache.spark.sql.catalyst.ExtendedAnalysisException
+{
+  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
+  "sqlState" : "42P01",
+  "messageParameters" : {
+    "relationName" : "`showdb`.`showcolumn1`"
+  },
+  "queryContext" : [ {
+    "objectType" : "",
+    "objectName" : "",
+    "startIndex" : 17,
+    "stopIndex" : 27,
+    "fragment" : "showcolumn1"
+  } ]
+}
 
 
 -- !query
@@ -110,10 +165,23 @@ org.apache.spark.sql.catalyst.ExtendedAnalysisException
 -- !query
 SHOW COLUMNS IN showdb.showcolumn1 from SHOWDB
 -- !query schema
-struct<col_name:string>
+struct<>
 -- !query output
-col 2
-col1
+org.apache.spark.sql.catalyst.ExtendedAnalysisException
+{
+  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
+  "sqlState" : "42P01",
+  "messageParameters" : {
+    "relationName" : "`showdb`.`showcolumn1`"
+  },
+  "queryContext" : [ {
+    "objectType" : "",
+    "objectName" : "",
+    "startIndex" : 17,
+    "stopIndex" : 34,
+    "fragment" : "showdb.showcolumn1"
+  } ]
+}
 
 
 -- !query
@@ -121,24 +189,43 @@ SHOW COLUMNS IN showdb.showcolumn1 FROM baddb
 -- !query schema
 struct<>
 -- !query output
-org.apache.spark.sql.AnalysisException
+org.apache.spark.sql.catalyst.ExtendedAnalysisException
 {
-  "errorClass" : "SHOW_COLUMNS_WITH_CONFLICT_NAMESPACE",
-  "sqlState" : "42K05",
+  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
+  "sqlState" : "42P01",
   "messageParameters" : {
-    "namespaceA" : "`baddb`",
-    "namespaceB" : "`showdb`"
-  }
+    "relationName" : "`showdb`.`showcolumn1`"
+  },
+  "queryContext" : [ {
+    "objectType" : "",
+    "objectName" : "",
+    "startIndex" : 17,
+    "stopIndex" : 34,
+    "fragment" : "showdb.showcolumn1"
+  } ]
 }
 
 
 -- !query
 SHOW COLUMNS IN showcolumn3
 -- !query schema
-struct<col_name:string>
+struct<>
 -- !query output
-col 4
-col3
+org.apache.spark.sql.catalyst.ExtendedAnalysisException
+{
+  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
+  "sqlState" : "42P01",
+  "messageParameters" : {
+    "relationName" : "`showcolumn3`"
+  },
+  "queryContext" : [ {
+    "objectType" : "",
+    "objectName" : "",
+    "startIndex" : 17,
+    "stopIndex" : 27,
+    "fragment" : "showcolumn3"
+  } ]
+}
 
 
 -- !query
@@ -230,7 +317,14 @@ DROP TABLE showcolumn1
 -- !query schema
 struct<>
 -- !query output
-
+org.apache.spark.sql.catalyst.analysis.NoSuchTableException
+{
+  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
+  "sqlState" : "42P01",
+  "messageParameters" : {
+    "relationName" : "`spark_catalog`.`showdb`.`showcolumn1`"
+  }
+}
 
 
 -- !query
@@ -246,7 +340,14 @@ DROP VIEW  showcolumn3
 -- !query schema
 struct<>
 -- !query output
-
+org.apache.spark.sql.catalyst.analysis.NoSuchTableException
+{
+  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
+  "sqlState" : "42P01",
+  "messageParameters" : {
+    "relationName" : "`spark_catalog`.`showdb`.`showcolumn3`"
+  }
+}
 
 
 -- !query

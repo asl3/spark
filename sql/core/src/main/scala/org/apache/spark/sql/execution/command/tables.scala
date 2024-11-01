@@ -618,6 +618,7 @@ case class DescribeTableCommand(
     table: TableIdentifier,
     partitionSpec: TablePartitionSpec,
     isExtended: Boolean,
+    asJson: Boolean = false,
     override val output: Seq[Attribute])
   extends DescribeCommandBase {
 

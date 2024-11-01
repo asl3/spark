@@ -40,7 +40,7 @@ InsertIntoHadoopFsRelationCommand file:[not included in comparison]/{warehouse_d
 -- !query
 describe table t1
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`default`.`t1`, false, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`default`.`t1`, false, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query

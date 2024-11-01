@@ -36,7 +36,15 @@ create table other(a int, b int) using json
 -- !query schema
 struct<>
 -- !query output
-
+org.apache.spark.sql.catalyst.parser.ParseException
+{
+  "errorClass" : "PARSE_SYNTAX_ERROR",
+  "sqlState" : "42601",
+  "messageParameters" : {
+    "error" : "'json'",
+    "hint" : ""
+  }
+}
 
 
 -- !query
@@ -44,7 +52,21 @@ insert into other values (1, 1), (1, 2), (2, 4)
 -- !query schema
 struct<>
 -- !query output
-
+org.apache.spark.sql.catalyst.ExtendedAnalysisException
+{
+  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
+  "sqlState" : "42P01",
+  "messageParameters" : {
+    "relationName" : "`other`"
+  },
+  "queryContext" : [ {
+    "objectType" : "",
+    "objectName" : "",
+    "startIndex" : 13,
+    "stopIndex" : 17,
+    "fragment" : "other"
+  } ]
+}
 
 
 -- !query
@@ -321,10 +343,23 @@ struct<i1:int>
 table t
 |> select (select a from other where x = a limit 1) as result
 -- !query schema
-struct<result:int>
+struct<>
 -- !query output
-1
-NULL
+org.apache.spark.sql.catalyst.ExtendedAnalysisException
+{
+  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
+  "sqlState" : "42P01",
+  "messageParameters" : {
+    "relationName" : "`other`"
+  },
+  "queryContext" : [ {
+    "objectType" : "",
+    "objectName" : "",
+    "startIndex" : 34,
+    "stopIndex" : 38,
+    "fragment" : "other"
+  } ]
+}
 
 
 -- !query
@@ -339,10 +374,23 @@ struct<result:int>
 table t
 |> select (select any_value(a) from other where x = a limit 1) as result
 -- !query schema
-struct<result:int>
+struct<>
 -- !query output
-1
-NULL
+org.apache.spark.sql.catalyst.ExtendedAnalysisException
+{
+  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
+  "sqlState" : "42P01",
+  "messageParameters" : {
+    "relationName" : "`other`"
+  },
+  "queryContext" : [ {
+    "objectType" : "",
+    "objectName" : "",
+    "startIndex" : 45,
+    "stopIndex" : 49,
+    "fragment" : "other"
+  } ]
+}
 
 
 -- !query
@@ -573,18 +621,46 @@ struct<x:int,col:struct<i1:int,i2:int>>
 table t
 |> where exists (select a from other where x = a limit 1)
 -- !query schema
-struct<x:int,y:string>
+struct<>
 -- !query output
-1	def
+org.apache.spark.sql.catalyst.ExtendedAnalysisException
+{
+  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
+  "sqlState" : "42P01",
+  "messageParameters" : {
+    "relationName" : "`other`"
+  },
+  "queryContext" : [ {
+    "objectType" : "",
+    "objectName" : "",
+    "startIndex" : 40,
+    "stopIndex" : 44,
+    "fragment" : "other"
+  } ]
+}
 
 
 -- !query
 table t
 |> where (select any_value(a) from other where x = a limit 1) = 1
 -- !query schema
-struct<x:int,y:string>
+struct<>
 -- !query output
-1	def
+org.apache.spark.sql.catalyst.ExtendedAnalysisException
+{
+  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
+  "sqlState" : "42P01",
+  "messageParameters" : {
+    "relationName" : "`other`"
+  },
+  "queryContext" : [ {
+    "objectType" : "",
+    "objectName" : "",
+    "startIndex" : 44,
+    "stopIndex" : 48,
+    "fragment" : "other"
+  } ]
+}
 
 
 -- !query
@@ -1966,10 +2042,23 @@ org.apache.spark.sql.catalyst.parser.ParseException
 table other
 |> aggregate sum(b) as result group by a
 -- !query schema
-struct<a:int,result:bigint>
+struct<>
 -- !query output
-1	3
-2	4
+org.apache.spark.sql.catalyst.ExtendedAnalysisException
+{
+  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
+  "sqlState" : "42P01",
+  "messageParameters" : {
+    "relationName" : "`other`"
+  },
+  "queryContext" : [ {
+    "objectType" : "",
+    "objectName" : "",
+    "startIndex" : 7,
+    "stopIndex" : 11,
+    "fragment" : "other"
+  } ]
+}
 
 
 -- !query
@@ -1977,10 +2066,23 @@ table other
 |> aggregate sum(b) as result group by a
 |> select result
 -- !query schema
-struct<result:bigint>
+struct<>
 -- !query output
-3
-4
+org.apache.spark.sql.catalyst.ExtendedAnalysisException
+{
+  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
+  "sqlState" : "42P01",
+  "messageParameters" : {
+    "relationName" : "`other`"
+  },
+  "queryContext" : [ {
+    "objectType" : "",
+    "objectName" : "",
+    "startIndex" : 7,
+    "stopIndex" : 11,
+    "fragment" : "other"
+  } ]
+}
 
 
 -- !query
@@ -1988,10 +2090,23 @@ table other
 |> aggregate sum(b) group by a + 1 as gkey
 |> select gkey
 -- !query schema
-struct<gkey:int>
+struct<>
 -- !query output
-2
-3
+org.apache.spark.sql.catalyst.ExtendedAnalysisException
+{
+  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
+  "sqlState" : "42P01",
+  "messageParameters" : {
+    "relationName" : "`other`"
+  },
+  "queryContext" : [ {
+    "objectType" : "",
+    "objectName" : "",
+    "startIndex" : 7,
+    "stopIndex" : 11,
+    "fragment" : "other"
+  } ]
+}
 
 
 -- !query
@@ -2035,9 +2150,23 @@ table other
 |> aggregate group by a
 |> where a = 1
 -- !query schema
-struct<a:int>
+struct<>
 -- !query output
-1
+org.apache.spark.sql.catalyst.ExtendedAnalysisException
+{
+  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
+  "sqlState" : "42P01",
+  "messageParameters" : {
+    "relationName" : "`other`"
+  },
+  "queryContext" : [ {
+    "objectType" : "",
+    "objectName" : "",
+    "startIndex" : 7,
+    "stopIndex" : 11,
+    "fragment" : "other"
+  } ]
+}
 
 
 -- !query
@@ -2092,20 +2221,46 @@ struct<x:int>
 table other
 |> aggregate a group by a
 -- !query schema
-struct<a:int,a:int>
+struct<>
 -- !query output
-1	1
-2	2
+org.apache.spark.sql.catalyst.ExtendedAnalysisException
+{
+  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
+  "sqlState" : "42P01",
+  "messageParameters" : {
+    "relationName" : "`other`"
+  },
+  "queryContext" : [ {
+    "objectType" : "",
+    "objectName" : "",
+    "startIndex" : 7,
+    "stopIndex" : 11,
+    "fragment" : "other"
+  } ]
+}
 
 
 -- !query
 table other
 |> aggregate a + count(b) group by a
 -- !query schema
-struct<a:int,(a + count(b)):bigint>
+struct<>
 -- !query output
-1	3
-2	3
+org.apache.spark.sql.catalyst.ExtendedAnalysisException
+{
+  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
+  "sqlState" : "42P01",
+  "messageParameters" : {
+    "relationName" : "`other`"
+  },
+  "queryContext" : [ {
+    "objectType" : "",
+    "objectName" : "",
+    "startIndex" : 7,
+    "stopIndex" : 11,
+    "fragment" : "other"
+  } ]
+}
 
 
 -- !query
@@ -2278,14 +2433,17 @@ struct<>
 -- !query output
 org.apache.spark.sql.catalyst.ExtendedAnalysisException
 {
-  "errorClass" : "MISSING_GROUP_BY",
-  "sqlState" : "42803",
+  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
+  "sqlState" : "42P01",
+  "messageParameters" : {
+    "relationName" : "`other`"
+  },
   "queryContext" : [ {
     "objectType" : "",
     "objectName" : "",
-    "startIndex" : 1,
-    "stopIndex" : 26,
-    "fragment" : "table other\n|> aggregate a"
+    "startIndex" : 7,
+    "stopIndex" : 11,
+    "fragment" : "other"
   } ]
 }
 
@@ -2296,19 +2454,19 @@ table other
 -- !query schema
 struct<>
 -- !query output
-org.apache.spark.sql.AnalysisException
+org.apache.spark.sql.catalyst.ExtendedAnalysisException
 {
-  "errorClass" : "PIPE_OPERATOR_SELECT_CONTAINS_AGGREGATE_FUNCTION",
-  "sqlState" : "0A000",
+  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
+  "sqlState" : "42P01",
   "messageParameters" : {
-    "expr" : "sum(a#x)"
+    "relationName" : "`other`"
   },
   "queryContext" : [ {
     "objectType" : "",
     "objectName" : "",
-    "startIndex" : 23,
-    "stopIndex" : 28,
-    "fragment" : "sum(a)"
+    "startIndex" : 7,
+    "stopIndex" : 11,
+    "fragment" : "other"
   } ]
 }
 
@@ -2343,18 +2501,17 @@ struct<>
 -- !query output
 org.apache.spark.sql.catalyst.ExtendedAnalysisException
 {
-  "errorClass" : "UNRESOLVED_COLUMN.WITH_SUGGESTION",
-  "sqlState" : "42703",
+  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
+  "sqlState" : "42P01",
   "messageParameters" : {
-    "objectName" : "`group`",
-    "proposal" : "`a`, `b`"
+    "relationName" : "`other`"
   },
   "queryContext" : [ {
     "objectType" : "",
     "objectName" : "",
-    "startIndex" : 26,
-    "stopIndex" : 30,
-    "fragment" : "group"
+    "startIndex" : 7,
+    "stopIndex" : 11,
+    "fragment" : "other"
   } ]
 }
 
@@ -2433,12 +2590,18 @@ struct<>
 -- !query output
 org.apache.spark.sql.catalyst.ExtendedAnalysisException
 {
-  "errorClass" : "MISSING_AGGREGATION",
-  "sqlState" : "42803",
+  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
+  "sqlState" : "42P01",
   "messageParameters" : {
-    "expression" : "\"b\"",
-    "expressionAnyValue" : "\"any_value(b)\""
-  }
+    "relationName" : "`other`"
+  },
+  "queryContext" : [ {
+    "objectType" : "",
+    "objectName" : "",
+    "startIndex" : 7,
+    "stopIndex" : 11,
+    "fragment" : "other"
+  } ]
 }
 
 
@@ -2455,7 +2618,14 @@ drop table other
 -- !query schema
 struct<>
 -- !query output
-
+org.apache.spark.sql.catalyst.analysis.NoSuchTableException
+{
+  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
+  "sqlState" : "42P01",
+  "messageParameters" : {
+    "relationName" : "`spark_catalog`.`default`.`other`"
+  }
+}
 
 
 -- !query

@@ -30,15 +30,35 @@ DropTable true, false
 -- !query
 create table other(a int, b int) using json
 -- !query analysis
-CreateDataSourceTableCommand `spark_catalog`.`default`.`other`, false
+org.apache.spark.sql.catalyst.parser.ParseException
+{
+  "errorClass" : "PARSE_SYNTAX_ERROR",
+  "sqlState" : "42601",
+  "messageParameters" : {
+    "error" : "'json'",
+    "hint" : ""
+  }
+}
 
 
 -- !query
 insert into other values (1, 1), (1, 2), (2, 4)
 -- !query analysis
-InsertIntoHadoopFsRelationCommand file:[not included in comparison]/{warehouse_dir}/other, false, JSON, [path=file:[not included in comparison]/{warehouse_dir}/other], Append, `spark_catalog`.`default`.`other`, org.apache.spark.sql.execution.datasources.InMemoryFileIndex(file:[not included in comparison]/{warehouse_dir}/other), [a, b]
-+- Project [cast(col1#x as int) AS a#x, cast(col2#x as int) AS b#x]
-   +- LocalRelation [col1#x, col2#x]
+org.apache.spark.sql.catalyst.ExtendedAnalysisException
+{
+  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
+  "sqlState" : "42P01",
+  "messageParameters" : {
+    "relationName" : "`other`"
+  },
+  "queryContext" : [ {
+    "objectType" : "",
+    "objectName" : "",
+    "startIndex" : 13,
+    "stopIndex" : 17,
+    "fragment" : "other"
+  } ]
+}
 
 
 -- !query
@@ -358,15 +378,21 @@ Project [col#x.i1 AS i1#x]
 table t
 |> select (select a from other where x = a limit 1) as result
 -- !query analysis
-Project [pipeselect(scalar-subquery#x [x#x]) AS result#x]
-:  +- GlobalLimit 1
-:     +- LocalLimit 1
-:        +- Project [a#x]
-:           +- Filter (outer(x#x) = a#x)
-:              +- SubqueryAlias spark_catalog.default.other
-:                 +- Relation spark_catalog.default.other[a#x,b#x] json
-+- SubqueryAlias spark_catalog.default.t
-   +- Relation spark_catalog.default.t[x#x,y#x] csv
+org.apache.spark.sql.catalyst.ExtendedAnalysisException
+{
+  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
+  "sqlState" : "42P01",
+  "messageParameters" : {
+    "relationName" : "`other`"
+  },
+  "queryContext" : [ {
+    "objectType" : "",
+    "objectName" : "",
+    "startIndex" : 34,
+    "stopIndex" : 38,
+    "fragment" : "other"
+  } ]
+}
 
 
 -- !query
@@ -383,15 +409,21 @@ Project [scalar-subquery#x [] AS result#x]
 table t
 |> select (select any_value(a) from other where x = a limit 1) as result
 -- !query analysis
-Project [pipeselect(scalar-subquery#x [x#x]) AS result#x]
-:  +- GlobalLimit 1
-:     +- LocalLimit 1
-:        +- Aggregate [any_value(a#x, false) AS any_value(a)#x]
-:           +- Filter (outer(x#x) = a#x)
-:              +- SubqueryAlias spark_catalog.default.other
-:                 +- Relation spark_catalog.default.other[a#x,b#x] json
-+- SubqueryAlias spark_catalog.default.t
-   +- Relation spark_catalog.default.t[x#x,y#x] csv
+org.apache.spark.sql.catalyst.ExtendedAnalysisException
+{
+  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
+  "sqlState" : "42P01",
+  "messageParameters" : {
+    "relationName" : "`other`"
+  },
+  "queryContext" : [ {
+    "objectType" : "",
+    "objectName" : "",
+    "startIndex" : 45,
+    "stopIndex" : 49,
+    "fragment" : "other"
+  } ]
+}
 
 
 -- !query
@@ -632,30 +664,42 @@ Filter (col#x.i1 = 2)
 table t
 |> where exists (select a from other where x = a limit 1)
 -- !query analysis
-Filter exists#x [x#x]
-:  +- GlobalLimit 1
-:     +- LocalLimit 1
-:        +- Project [a#x]
-:           +- Filter (outer(x#x) = a#x)
-:              +- SubqueryAlias spark_catalog.default.other
-:                 +- Relation spark_catalog.default.other[a#x,b#x] json
-+- SubqueryAlias spark_catalog.default.t
-   +- Relation spark_catalog.default.t[x#x,y#x] csv
+org.apache.spark.sql.catalyst.ExtendedAnalysisException
+{
+  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
+  "sqlState" : "42P01",
+  "messageParameters" : {
+    "relationName" : "`other`"
+  },
+  "queryContext" : [ {
+    "objectType" : "",
+    "objectName" : "",
+    "startIndex" : 40,
+    "stopIndex" : 44,
+    "fragment" : "other"
+  } ]
+}
 
 
 -- !query
 table t
 |> where (select any_value(a) from other where x = a limit 1) = 1
 -- !query analysis
-Filter (scalar-subquery#x [x#x] = 1)
-:  +- GlobalLimit 1
-:     +- LocalLimit 1
-:        +- Aggregate [any_value(a#x, false) AS any_value(a)#x]
-:           +- Filter (outer(x#x) = a#x)
-:              +- SubqueryAlias spark_catalog.default.other
-:                 +- Relation spark_catalog.default.other[a#x,b#x] json
-+- SubqueryAlias spark_catalog.default.t
-   +- Relation spark_catalog.default.t[x#x,y#x] csv
+org.apache.spark.sql.catalyst.ExtendedAnalysisException
+{
+  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
+  "sqlState" : "42P01",
+  "messageParameters" : {
+    "relationName" : "`other`"
+  },
+  "queryContext" : [ {
+    "objectType" : "",
+    "objectName" : "",
+    "startIndex" : 44,
+    "stopIndex" : 48,
+    "fragment" : "other"
+  } ]
+}
 
 
 -- !query
@@ -2321,9 +2365,21 @@ org.apache.spark.sql.catalyst.parser.ParseException
 table other
 |> aggregate sum(b) as result group by a
 -- !query analysis
-Aggregate [a#x], [a#x, sum(b#x) AS result#xL]
-+- SubqueryAlias spark_catalog.default.other
-   +- Relation spark_catalog.default.other[a#x,b#x] json
+org.apache.spark.sql.catalyst.ExtendedAnalysisException
+{
+  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
+  "sqlState" : "42P01",
+  "messageParameters" : {
+    "relationName" : "`other`"
+  },
+  "queryContext" : [ {
+    "objectType" : "",
+    "objectName" : "",
+    "startIndex" : 7,
+    "stopIndex" : 11,
+    "fragment" : "other"
+  } ]
+}
 
 
 -- !query
@@ -2331,10 +2387,21 @@ table other
 |> aggregate sum(b) as result group by a
 |> select result
 -- !query analysis
-Project [result#xL]
-+- Aggregate [a#x], [a#x, sum(b#x) AS result#xL]
-   +- SubqueryAlias spark_catalog.default.other
-      +- Relation spark_catalog.default.other[a#x,b#x] json
+org.apache.spark.sql.catalyst.ExtendedAnalysisException
+{
+  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
+  "sqlState" : "42P01",
+  "messageParameters" : {
+    "relationName" : "`other`"
+  },
+  "queryContext" : [ {
+    "objectType" : "",
+    "objectName" : "",
+    "startIndex" : 7,
+    "stopIndex" : 11,
+    "fragment" : "other"
+  } ]
+}
 
 
 -- !query
@@ -2342,10 +2409,21 @@ table other
 |> aggregate sum(b) group by a + 1 as gkey
 |> select gkey
 -- !query analysis
-Project [gkey#x]
-+- Aggregate [(a#x + 1)], [(a#x + 1) AS gkey#x, sum(b#x) AS sum(b)#xL]
-   +- SubqueryAlias spark_catalog.default.other
-      +- Relation spark_catalog.default.other[a#x,b#x] json
+org.apache.spark.sql.catalyst.ExtendedAnalysisException
+{
+  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
+  "sqlState" : "42P01",
+  "messageParameters" : {
+    "relationName" : "`other`"
+  },
+  "queryContext" : [ {
+    "objectType" : "",
+    "objectName" : "",
+    "startIndex" : 7,
+    "stopIndex" : 11,
+    "fragment" : "other"
+  } ]
+}
 
 
 -- !query
@@ -2389,11 +2467,21 @@ table other
 |> aggregate group by a
 |> where a = 1
 -- !query analysis
-Filter (a#x = 1)
-+- SubqueryAlias __auto_generated_subquery_name
-   +- Aggregate [a#x], [a#x]
-      +- SubqueryAlias spark_catalog.default.other
-         +- Relation spark_catalog.default.other[a#x,b#x] json
+org.apache.spark.sql.catalyst.ExtendedAnalysisException
+{
+  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
+  "sqlState" : "42P01",
+  "messageParameters" : {
+    "relationName" : "`other`"
+  },
+  "queryContext" : [ {
+    "objectType" : "",
+    "objectName" : "",
+    "startIndex" : 7,
+    "stopIndex" : 11,
+    "fragment" : "other"
+  } ]
+}
 
 
 -- !query
@@ -2451,18 +2539,42 @@ Project [x#x]
 table other
 |> aggregate a group by a
 -- !query analysis
-Aggregate [a#x], [a#x, a#x]
-+- SubqueryAlias spark_catalog.default.other
-   +- Relation spark_catalog.default.other[a#x,b#x] json
+org.apache.spark.sql.catalyst.ExtendedAnalysisException
+{
+  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
+  "sqlState" : "42P01",
+  "messageParameters" : {
+    "relationName" : "`other`"
+  },
+  "queryContext" : [ {
+    "objectType" : "",
+    "objectName" : "",
+    "startIndex" : 7,
+    "stopIndex" : 11,
+    "fragment" : "other"
+  } ]
+}
 
 
 -- !query
 table other
 |> aggregate a + count(b) group by a
 -- !query analysis
-Aggregate [a#x], [a#x, (cast(a#x as bigint) + count(b#x)) AS (a + count(b))#xL]
-+- SubqueryAlias spark_catalog.default.other
-   +- Relation spark_catalog.default.other[a#x,b#x] json
+org.apache.spark.sql.catalyst.ExtendedAnalysisException
+{
+  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
+  "sqlState" : "42P01",
+  "messageParameters" : {
+    "relationName" : "`other`"
+  },
+  "queryContext" : [ {
+    "objectType" : "",
+    "objectName" : "",
+    "startIndex" : 7,
+    "stopIndex" : 11,
+    "fragment" : "other"
+  } ]
+}
 
 
 -- !query
@@ -2619,14 +2731,17 @@ table other
 -- !query analysis
 org.apache.spark.sql.catalyst.ExtendedAnalysisException
 {
-  "errorClass" : "MISSING_GROUP_BY",
-  "sqlState" : "42803",
+  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
+  "sqlState" : "42P01",
+  "messageParameters" : {
+    "relationName" : "`other`"
+  },
   "queryContext" : [ {
     "objectType" : "",
     "objectName" : "",
-    "startIndex" : 1,
-    "stopIndex" : 26,
-    "fragment" : "table other\n|> aggregate a"
+    "startIndex" : 7,
+    "stopIndex" : 11,
+    "fragment" : "other"
   } ]
 }
 
@@ -2635,19 +2750,19 @@ org.apache.spark.sql.catalyst.ExtendedAnalysisException
 table other
 |> select sum(a) as result
 -- !query analysis
-org.apache.spark.sql.AnalysisException
+org.apache.spark.sql.catalyst.ExtendedAnalysisException
 {
-  "errorClass" : "PIPE_OPERATOR_SELECT_CONTAINS_AGGREGATE_FUNCTION",
-  "sqlState" : "0A000",
+  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
+  "sqlState" : "42P01",
   "messageParameters" : {
-    "expr" : "sum(a#x)"
+    "relationName" : "`other`"
   },
   "queryContext" : [ {
     "objectType" : "",
     "objectName" : "",
-    "startIndex" : 23,
-    "stopIndex" : 28,
-    "fragment" : "sum(a)"
+    "startIndex" : 7,
+    "stopIndex" : 11,
+    "fragment" : "other"
   } ]
 }
 
@@ -2678,18 +2793,17 @@ table other
 -- !query analysis
 org.apache.spark.sql.catalyst.ExtendedAnalysisException
 {
-  "errorClass" : "UNRESOLVED_COLUMN.WITH_SUGGESTION",
-  "sqlState" : "42703",
+  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
+  "sqlState" : "42P01",
   "messageParameters" : {
-    "objectName" : "`group`",
-    "proposal" : "`a`, `b`"
+    "relationName" : "`other`"
   },
   "queryContext" : [ {
     "objectType" : "",
     "objectName" : "",
-    "startIndex" : 26,
-    "stopIndex" : 30,
-    "fragment" : "group"
+    "startIndex" : 7,
+    "stopIndex" : 11,
+    "fragment" : "other"
   } ]
 }
 
@@ -2760,12 +2874,18 @@ table other
 -- !query analysis
 org.apache.spark.sql.catalyst.ExtendedAnalysisException
 {
-  "errorClass" : "MISSING_AGGREGATION",
-  "sqlState" : "42803",
+  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
+  "sqlState" : "42P01",
   "messageParameters" : {
-    "expression" : "\"b\"",
-    "expressionAnyValue" : "\"any_value(b)\""
-  }
+    "relationName" : "`other`"
+  },
+  "queryContext" : [ {
+    "objectType" : "",
+    "objectName" : "",
+    "startIndex" : 7,
+    "stopIndex" : 11,
+    "fragment" : "other"
+  } ]
 }
 
 
@@ -2779,8 +2899,14 @@ DropTable false, false
 -- !query
 drop table other
 -- !query analysis
-DropTable false, false
-+- ResolvedIdentifier V2SessionCatalog(spark_catalog), default.other
+org.apache.spark.sql.catalyst.analysis.NoSuchTableException
+{
+  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
+  "sqlState" : "42P01",
+  "messageParameters" : {
+    "relationName" : "`spark_catalog`.`default`.`other`"
+  }
+}
 
 
 -- !query

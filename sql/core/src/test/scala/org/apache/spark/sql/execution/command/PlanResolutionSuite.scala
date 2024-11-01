@@ -917,10 +917,10 @@ class PlanResolutionSuite extends AnalysisTest {
         if (useV1Command) {
           val expected1 = DescribeTableCommand(
             TableIdentifier(tblName, Some("default"), Some(SESSION_CATALOG_NAME)),
-            Map.empty, false, parsed1.output)
+            Map.empty, false, false, parsed1.output)
           val expected2 = DescribeTableCommand(
             TableIdentifier(tblName, Some("default"), Some(SESSION_CATALOG_NAME)),
-            Map.empty, true, parsed2.output)
+            Map.empty, true, false, parsed2.output)
 
           comparePlans(parsed1, expected1)
           comparePlans(parsed2, expected2)
@@ -943,7 +943,7 @@ class PlanResolutionSuite extends AnalysisTest {
         if (useV1Command) {
           val expected3 = DescribeTableCommand(
             TableIdentifier(tblName, Some("default"), Some(SESSION_CATALOG_NAME)),
-            Map("a" -> "1"), false, parsed3.output)
+            Map("a" -> "1"), false, false, parsed3.output)
           comparePlans(parsed3, expected3)
         } else {
           parsed3 match {
@@ -971,10 +971,10 @@ class PlanResolutionSuite extends AnalysisTest {
         if (useV1Command) {
           val expected1 = DescribeTableCommand(
             TableIdentifier(tblName, Some("default"), Some(SESSION_CATALOG_NAME)),
-            Map.empty, false, parsed1.output)
+            Map.empty, false, false, parsed1.output)
           val expected2 = DescribeTableCommand(
             TableIdentifier(tblName, Some("default"), Some(SESSION_CATALOG_NAME)),
-            Map.empty, true, parsed2.output)
+            Map.empty, true, false, parsed2.output)
 
           comparePlans(parsed1, expected1)
           comparePlans(parsed2, expected2)
@@ -997,7 +997,7 @@ class PlanResolutionSuite extends AnalysisTest {
         if (useV1Command) {
           val expected3 = DescribeTableCommand(
             TableIdentifier(tblName, Some("default"), Some(SESSION_CATALOG_NAME)),
-            Map("a" -> "1"), false, parsed3.output)
+            Map("a" -> "1"), false, false, parsed3.output)
           comparePlans(parsed3, expected3)
         } else {
           parsed3 match {

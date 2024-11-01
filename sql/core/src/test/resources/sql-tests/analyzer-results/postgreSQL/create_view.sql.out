@@ -261,7 +261,7 @@ CreateViewCommand `spark_catalog`.`temp_view_test`.`v1`, SELECT * FROM base_tabl
 -- !query
 DESC TABLE EXTENDED v1
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`temp_view_test`.`v1`, true, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`temp_view_test`.`v1`, true, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
@@ -292,7 +292,7 @@ CreateViewCommand `v2_temp`, SELECT * FROM base_table, false, false, LocalTempVi
 -- !query
 DESC TABLE EXTENDED v2_temp
 -- !query analysis
-DescribeTableCommand `v2_temp`, true, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `v2_temp`, true, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
@@ -307,7 +307,7 @@ CreateViewCommand `spark_catalog`.`temp_view_test`.`v2`, SELECT * FROM base_tabl
 -- !query
 DESC TABLE EXTENDED temp_view_test.v2
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`temp_view_test`.`v2`, true, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`temp_view_test`.`v2`, true, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
@@ -349,7 +349,7 @@ CreateViewCommand `spark_catalog`.`temp_view_test`.`v3`, SELECT t1.a AS t1_a, t2
 -- !query
 DESC TABLE EXTENDED v3
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`temp_view_test`.`v3`, true, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`temp_view_test`.`v3`, true, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
@@ -406,7 +406,7 @@ CreateViewCommand `spark_catalog`.`temp_view_test`.`v4`, SELECT * FROM base_tabl
 -- !query
 DESC TABLE EXTENDED v4
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`temp_view_test`.`v4`, true, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`temp_view_test`.`v4`, true, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
@@ -427,7 +427,7 @@ CreateViewCommand `spark_catalog`.`temp_view_test`.`v5`, SELECT t1.id, t2.a FROM
 -- !query
 DESC TABLE EXTENDED v5
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`temp_view_test`.`v5`, true, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`temp_view_test`.`v5`, true, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
@@ -446,7 +446,7 @@ CreateViewCommand `spark_catalog`.`temp_view_test`.`v6`, SELECT * FROM base_tabl
 -- !query
 DESC TABLE EXTENDED v6
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`temp_view_test`.`v6`, true, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`temp_view_test`.`v6`, true, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
@@ -465,7 +465,7 @@ CreateViewCommand `spark_catalog`.`temp_view_test`.`v7`, SELECT * FROM base_tabl
 -- !query
 DESC TABLE EXTENDED v7
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`temp_view_test`.`v7`, true, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`temp_view_test`.`v7`, true, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
@@ -483,7 +483,7 @@ CreateViewCommand `spark_catalog`.`temp_view_test`.`v8`, SELECT * FROM base_tabl
 -- !query
 DESC TABLE EXTENDED v8
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`temp_view_test`.`v8`, true, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`temp_view_test`.`v8`, true, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
@@ -662,7 +662,7 @@ CreateViewCommand `spark_catalog`.`testviewschm2`.`nontemp1`, SELECT * FROM t1 C
 -- !query
 DESC TABLE EXTENDED nontemp1
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`testviewschm2`.`nontemp1`, true, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`testviewschm2`.`nontemp1`, true, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
@@ -696,7 +696,7 @@ CreateViewCommand `spark_catalog`.`testviewschm2`.`nontemp2`, SELECT * FROM t1 I
 -- !query
 DESC TABLE EXTENDED nontemp2
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`testviewschm2`.`nontemp2`, true, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`testviewschm2`.`nontemp2`, true, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
@@ -730,7 +730,7 @@ CreateViewCommand `spark_catalog`.`testviewschm2`.`nontemp3`, SELECT * FROM t1 L
 -- !query
 DESC TABLE EXTENDED nontemp3
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`testviewschm2`.`nontemp3`, true, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`testviewschm2`.`nontemp3`, true, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
@@ -764,7 +764,7 @@ CreateViewCommand `spark_catalog`.`testviewschm2`.`nontemp4`, SELECT * FROM t1 L
 -- !query
 DESC TABLE EXTENDED nontemp4
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`testviewschm2`.`nontemp4`, true, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`testviewschm2`.`nontemp4`, true, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
@@ -868,7 +868,7 @@ AND EXISTS (SELECT g FROM tbl4 LEFT JOIN tbl3 ON tbl4.h = tbl3.f), false, false,
 -- !query
 DESC TABLE EXTENDED pubview
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`testviewschm2`.`pubview`, true, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`testviewschm2`.`pubview`, true, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
@@ -910,7 +910,7 @@ AND NOT EXISTS (SELECT g FROM tbl4 LEFT JOIN tmptbl ON tbl4.h = tmptbl.j), false
 -- !query
 DESC TABLE EXTENDED mytempview
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`testviewschm2`.`mytempview`, true, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`testviewschm2`.`mytempview`, true, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
@@ -1055,25 +1055,25 @@ CreateViewCommand `spark_catalog`.`testviewschm2`.`aliased_view_4`, select * fro
 -- !query
 DESC TABLE aliased_view_1
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`testviewschm2`.`aliased_view_1`, false, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`testviewschm2`.`aliased_view_1`, false, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
 DESC TABLE aliased_view_2
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`testviewschm2`.`aliased_view_2`, false, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`testviewschm2`.`aliased_view_2`, false, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
 DESC TABLE aliased_view_3
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`testviewschm2`.`aliased_view_3`, false, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`testviewschm2`.`aliased_view_3`, false, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
 DESC TABLE aliased_view_4
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`testviewschm2`.`aliased_view_4`, false, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`testviewschm2`.`aliased_view_4`, false, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
@@ -1085,25 +1085,25 @@ AlterTableRenameCommand `spark_catalog`.`testviewschm2`.`tx1`, `a1`, false
 -- !query
 DESC TABLE aliased_view_1
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`testviewschm2`.`aliased_view_1`, false, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`testviewschm2`.`aliased_view_1`, false, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
 DESC TABLE aliased_view_2
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`testviewschm2`.`aliased_view_2`, false, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`testviewschm2`.`aliased_view_2`, false, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
 DESC TABLE aliased_view_3
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`testviewschm2`.`aliased_view_3`, false, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`testviewschm2`.`aliased_view_3`, false, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
 DESC TABLE aliased_view_4
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`testviewschm2`.`aliased_view_4`, false, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`testviewschm2`.`aliased_view_4`, false, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
@@ -1115,25 +1115,25 @@ AlterTableRenameCommand `spark_catalog`.`testviewschm2`.`tt1`, `a2`, false
 -- !query
 DESC TABLE aliased_view_1
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`testviewschm2`.`aliased_view_1`, false, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`testviewschm2`.`aliased_view_1`, false, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
 DESC TABLE aliased_view_2
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`testviewschm2`.`aliased_view_2`, false, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`testviewschm2`.`aliased_view_2`, false, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
 DESC TABLE aliased_view_3
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`testviewschm2`.`aliased_view_3`, false, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`testviewschm2`.`aliased_view_3`, false, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
 DESC TABLE aliased_view_4
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`testviewschm2`.`aliased_view_4`, false, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`testviewschm2`.`aliased_view_4`, false, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
@@ -1145,25 +1145,25 @@ AlterTableRenameCommand `spark_catalog`.`testviewschm2`.`a1`, `tt1`, false
 -- !query
 DESC TABLE aliased_view_1
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`testviewschm2`.`aliased_view_1`, false, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`testviewschm2`.`aliased_view_1`, false, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
 DESC TABLE aliased_view_2
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`testviewschm2`.`aliased_view_2`, false, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`testviewschm2`.`aliased_view_2`, false, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
 DESC TABLE aliased_view_3
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`testviewschm2`.`aliased_view_3`, false, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`testviewschm2`.`aliased_view_3`, false, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
 DESC TABLE aliased_view_4
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`testviewschm2`.`aliased_view_4`, false, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`testviewschm2`.`aliased_view_4`, false, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
@@ -1299,31 +1299,31 @@ CreateViewCommand `spark_catalog`.`testviewschm2`.`v3`, select * from tt2 join t
 -- !query
 DESC TABLE v1
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`testviewschm2`.`v1`, false, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`testviewschm2`.`v1`, false, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
 DESC TABLE v1a
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`testviewschm2`.`v1a`, false, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`testviewschm2`.`v1a`, false, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
 DESC TABLE v2
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`testviewschm2`.`v2`, false, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`testviewschm2`.`v2`, false, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
 DESC TABLE v2a
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`testviewschm2`.`v2a`, false, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`testviewschm2`.`v2a`, false, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
 DESC TABLE v3
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`testviewschm2`.`v3`, false, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`testviewschm2`.`v3`, false, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
@@ -1341,31 +1341,31 @@ AlterTableAddColumnsCommand `spark_catalog`.`testviewschm2`.`tt2`, [StructField(
 -- !query
 DESC TABLE v1
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`testviewschm2`.`v1`, false, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`testviewschm2`.`v1`, false, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
 DESC TABLE v1a
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`testviewschm2`.`v1a`, false, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`testviewschm2`.`v1a`, false, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
 DESC TABLE v2
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`testviewschm2`.`v2`, false, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`testviewschm2`.`v2`, false, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
 DESC TABLE v2a
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`testviewschm2`.`v2a`, false, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`testviewschm2`.`v2a`, false, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
 DESC TABLE v3
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`testviewschm2`.`v3`, false, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`testviewschm2`.`v3`, false, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
@@ -1396,31 +1396,31 @@ AlterTableAddColumnsCommand `spark_catalog`.`testviewschm2`.`tt3`, [StructField(
 -- !query
 DESC TABLE v1
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`testviewschm2`.`v1`, false, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`testviewschm2`.`v1`, false, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
 DESC TABLE v1a
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`testviewschm2`.`v1a`, false, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`testviewschm2`.`v1a`, false, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
 DESC TABLE v2
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`testviewschm2`.`v2`, false, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`testviewschm2`.`v2`, false, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
 DESC TABLE v2a
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`testviewschm2`.`v2a`, false, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`testviewschm2`.`v2a`, false, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
 DESC TABLE v3
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`testviewschm2`.`v3`, false, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`testviewschm2`.`v3`, false, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
@@ -1452,7 +1452,7 @@ CreateViewCommand `spark_catalog`.`testviewschm2`.`vv1`, select * from (tt5 cros
 -- !query
 DESC TABLE vv1
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`testviewschm2`.`vv1`, false, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`testviewschm2`.`vv1`, false, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
@@ -1464,7 +1464,7 @@ AlterTableAddColumnsCommand `spark_catalog`.`testviewschm2`.`tt5`, [StructField(
 -- !query
 DESC TABLE vv1
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`testviewschm2`.`vv1`, false, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`testviewschm2`.`vv1`, false, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
@@ -1476,7 +1476,7 @@ AlterTableAddColumnsCommand `spark_catalog`.`testviewschm2`.`tt5`, [StructField(
 -- !query
 DESC TABLE vv1
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`testviewschm2`.`vv1`, false, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`testviewschm2`.`vv1`, false, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
@@ -1521,7 +1521,7 @@ select * from tt7 full join tt8 using (x), tt8 tt8x, false, false, PersistedView
 -- !query
 DESC TABLE vv2
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`testviewschm2`.`vv2`, false, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`testviewschm2`.`vv2`, false, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
@@ -1563,7 +1563,7 @@ select * from
 -- !query
 DESC TABLE vv3
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`testviewschm2`.`vv3`, false, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`testviewschm2`.`vv3`, false, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
@@ -1610,7 +1610,7 @@ select * from
 -- !query
 DESC TABLE vv4
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`testviewschm2`.`vv4`, false, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`testviewschm2`.`vv4`, false, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
@@ -1634,19 +1634,19 @@ AlterTableAddColumnsCommand `spark_catalog`.`testviewschm2`.`tt8`, [StructField(
 -- !query
 DESC TABLE vv2
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`testviewschm2`.`vv2`, false, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`testviewschm2`.`vv2`, false, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
 DESC TABLE vv3
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`testviewschm2`.`vv3`, false, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`testviewschm2`.`vv3`, false, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
 DESC TABLE vv4
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`testviewschm2`.`vv4`, false, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`testviewschm2`.`vv4`, false, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
@@ -1692,13 +1692,13 @@ select * from tt7a left join tt8a using (x), tt8a tt8ax, false, false, Persisted
 -- !query
 DESC TABLE vv4
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`testviewschm2`.`vv4`, false, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`testviewschm2`.`vv4`, false, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
 DESC TABLE vv2a
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`testviewschm2`.`vv2a`, false, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`testviewschm2`.`vv2a`, false, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
@@ -1729,13 +1729,13 @@ CreateViewCommand `spark_catalog`.`testviewschm2`.`vv5`, select x,y,z from tt9 j
 -- !query
 DESC TABLE vv5
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`testviewschm2`.`vv5`, false, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`testviewschm2`.`vv5`, false, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
 DESC TABLE vv5
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`testviewschm2`.`vv5`, false, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`testviewschm2`.`vv5`, false, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
@@ -1778,7 +1778,7 @@ CreateViewCommand `spark_catalog`.`testviewschm2`.`vv6`, select x,y,z,q from
 -- !query
 DESC TABLE vv6
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`testviewschm2`.`vv6`, false, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`testviewschm2`.`vv6`, false, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
@@ -1790,7 +1790,7 @@ AlterTableAddColumnsCommand `spark_catalog`.`testviewschm2`.`tt11`, [StructField
 -- !query
 DESC TABLE vv6
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`testviewschm2`.`vv6`, false, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`testviewschm2`.`vv6`, false, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
@@ -1822,7 +1822,7 @@ CreateViewCommand `spark_catalog`.`testviewschm2`.`tt18v`, select * from int8_tb
 -- !query
 DESC TABLE tt18v
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`testviewschm2`.`tt18v`, false, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`testviewschm2`.`tt18v`, false, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
@@ -1842,7 +1842,7 @@ CreateViewCommand `spark_catalog`.`testviewschm2`.`tt21v`, select * from tt5 nat
 -- !query
 DESC TABLE tt21v
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`testviewschm2`.`tt21v`, false, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`testviewschm2`.`tt21v`, false, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
@@ -1862,7 +1862,7 @@ CreateViewCommand `spark_catalog`.`testviewschm2`.`tt22v`, select * from tt5 nat
 -- !query
 DESC TABLE tt22v
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`testviewschm2`.`tt22v`, false, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`testviewschm2`.`tt22v`, false, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
@@ -1886,7 +1886,7 @@ select 42, 43, false, false, PersistedView, COMPENSATION, true
 -- !query
 DESC TABLE tt23v
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`testviewschm2`.`tt23v`, false, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`testviewschm2`.`tt23v`, false, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query

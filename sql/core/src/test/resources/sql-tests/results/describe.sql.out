@@ -72,6 +72,21 @@ d                   	string
 
 
 -- !query
+DESCRIBE t AS JSON
+-- !query schema
+struct<col_name:string,data_type:string,comment:string>
+-- !query output
+a                   	string              	                    
+b                   	int                 	                    
+c                   	string              	                    
+d                   	string              	                    
+# Partition Information	                    	                    
+# col_name          	data_type           	comment             
+c                   	string              	                    
+d                   	string
+
+
+-- !query
 DESC default.t
 -- !query schema
 struct<col_name:string,data_type:string,comment:string>
@@ -590,7 +605,7 @@ struct<plan:string>
 -- !query output
 == Physical Plan ==
 Execute DescribeTableCommand
-   +- DescribeTableCommand `spark_catalog`.`default`.`t`, false, [col_name#x, data_type#x, comment#x]
+   +- DescribeTableCommand `spark_catalog`.`default`.`t`, false, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
@@ -600,7 +615,7 @@ struct<plan:string>
 -- !query output
 == Physical Plan ==
 Execute DescribeTableCommand
-   +- DescribeTableCommand `spark_catalog`.`default`.`t`, true, [col_name#x, data_type#x, comment#x]
+   +- DescribeTableCommand `spark_catalog`.`default`.`t`, true, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
@@ -614,14 +629,14 @@ struct<plan:string>
 
 == Analyzed Logical Plan ==
 col_name: string, data_type: string, comment: string
-DescribeTableCommand `spark_catalog`.`default`.`t`, false, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`default`.`t`, false, false, [col_name#x, data_type#x, comment#x]
 
 == Optimized Logical Plan ==
-DescribeTableCommand `spark_catalog`.`default`.`t`, false, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`default`.`t`, false, false, [col_name#x, data_type#x, comment#x]
 
 == Physical Plan ==
 Execute DescribeTableCommand
-   +- DescribeTableCommand `spark_catalog`.`default`.`t`, false, [col_name#x, data_type#x, comment#x]
+   +- DescribeTableCommand `spark_catalog`.`default`.`t`, false, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
@@ -641,7 +656,7 @@ struct<plan:string>
 -- !query output
 == Physical Plan ==
 Execute DescribeTableCommand
-   +- DescribeTableCommand `spark_catalog`.`default`.`t`, [c=Us, d=2], false, [col_name#x, data_type#x, comment#x]
+   +- DescribeTableCommand `spark_catalog`.`default`.`t`, [c=Us, d=2], false, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
