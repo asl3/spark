@@ -844,14 +844,16 @@ case class DescribeTableCommand(
 
   private def describeFormattedTableInfoJson(
     table: CatalogTable, buffer: ArrayBuffer[Row]): Unit = {
+
     val excludedTableInfo = Set("Partition Columns", "Schema")
 
     val filteredTableInfo = table.toLinkedHashMap.filterNot { case (key, _) =>
       excludedTableInfo.contains(key)
     }
 
+    // Transform keys to uppercase and replace spaces with underscores
     val newJsonObject = JObject(filteredTableInfo.map { case (key, value) =>
-      key -> JString(value)
+      key.toUpperCase().replace(" ", "_") -> JString(value)
     }.toList)
 
     val jsonString = compact(render(newJsonObject))
