@@ -613,7 +613,7 @@ abstract class DescribeCommandBase extends LeafRunnableCommand {
       s"""{
          |  "COLUMN_NAME": "${column.name}",
          |  "DATA_TYPE": "${column.dataType.simpleString}",
-         |  "COMMENT": "${Option(column.getComment()).getOrElse(JNull)}"
+         |  "COMMENT": ${column.getComment().map(c => s"""$c""").getOrElse("null")}
          |}""".stripMargin
     }.mkString("[", ",", "]")
 
