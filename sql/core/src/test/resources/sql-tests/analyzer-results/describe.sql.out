@@ -63,6 +63,43 @@ DescribeTableCommand `spark_catalog`.`default`.`t`, false, true, [col_name#x, da
 
 
 -- !query
+CREATE TABLE t2 (
+    a STRING,
+    b INT,
+    c STRING,
+    d STRING
+)
+USING parquet
+OPTIONS (
+    a '1',
+    b '2',
+    password 'password'
+)
+PARTITIONED BY (c, d)
+CLUSTERED BY (a) SORTED BY (b ASC) INTO 2 BUCKETS
+COMMENT 'table_comment'
+TBLPROPERTIES (
+    t 'test',
+    password 'password'
+)
+-- !query analysis
+org.apache.spark.sql.catalyst.analysis.TableAlreadyExistsException
+{
+  "errorClass" : "TABLE_OR_VIEW_ALREADY_EXISTS",
+  "sqlState" : "42P07",
+  "messageParameters" : {
+    "relationName" : "`spark_catalog`.`default`.`t2`"
+  }
+}
+
+
+-- !query
+DESC t2
+-- !query analysis
+DescribeTableCommand `spark_catalog`.`default`.`t2`, false, false, [col_name#x, data_type#x, comment#x]
+
+
+-- !query
 DESC default.t
 -- !query analysis
 DescribeTableCommand `spark_catalog`.`default`.`t`, false, false, [col_name#x, data_type#x, comment#x]
@@ -81,9 +118,21 @@ DescribeTableCommand `spark_catalog`.`default`.`t`, true, false, [col_name#x, da
 
 
 -- !query
+DESC FORMATTED t AS JSON
+-- !query analysis
+DescribeTableCommand `spark_catalog`.`default`.`t`, true, true, [col_name#x, data_type#x, comment#x]
+
+
+-- !query
 DESC EXTENDED t
 -- !query analysis
 DescribeTableCommand `spark_catalog`.`default`.`t`, true, false, [col_name#x, data_type#x, comment#x]
+
+
+-- !query
+DESC EXTENDED t AS JSON
+-- !query analysis
+DescribeTableCommand `spark_catalog`.`default`.`t`, true, true, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
@@ -189,6 +238,12 @@ DescribeTableCommand `temp_v`, false, false, [col_name#x, data_type#x, comment#x
 
 
 -- !query
+DESC temp_v AS JSON
+-- !query analysis
+DescribeTableCommand `temp_v`, false, true, [col_name#x, data_type#x, comment#x]
+
+
+-- !query
 DESC TABLE temp_v
 -- !query analysis
 DescribeTableCommand `temp_v`, false, false, [col_name#x, data_type#x, comment#x]
@@ -270,6 +325,12 @@ org.apache.spark.sql.AnalysisException
 EXPLAIN DESC t
 -- !query analysis
 ExplainCommand 'DescribeRelation false, false, [col_name#x, data_type#x, comment#x], SimpleMode
+
+
+-- !query
+EXPLAIN DESC t AS JSON
+-- !query analysis
+ExplainCommand 'DescribeRelation false, true, [col_name#x, data_type#x, comment#x], SimpleMode
 
 
 -- !query

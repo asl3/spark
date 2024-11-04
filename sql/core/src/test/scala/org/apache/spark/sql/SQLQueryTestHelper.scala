@@ -32,7 +32,7 @@ import org.apache.spark.sql.catalyst.planning.PhysicalOperation
 import org.apache.spark.sql.catalyst.plans.logical._
 import org.apache.spark.sql.catalyst.util.fileToString
 import org.apache.spark.sql.execution.HiveResult.hiveResultString
-import org.apache.spark.sql.execution.SQLExecution
+ import org.apache.spark.sql.execution.SQLExecution
 import org.apache.spark.sql.execution.command.{DescribeColumnCommand, DescribeCommandBase}
 import org.apache.spark.sql.types.{DateType, StructType, TimestampType}
 import org.apache.spark.util.ArrayImplicits.SparkArrayOps
@@ -46,6 +46,7 @@ trait SQLQueryTestHelper extends Logging {
   protected val validFileExtensions = ".sql"
 
   protected def replaceNotIncludedMsg(line: String): String = {
+    print("\n\n ****  line *** : " + line + "\n\n")
     line.replaceAll("#\\d+", "#x")
       .replaceAll("plan_id=\\d+", "plan_id=x")
       .replaceAll(
@@ -60,6 +61,26 @@ trait SQLQueryTestHelper extends Logging {
       .replaceAll("CTERelationDef \\d+,", s"CTERelationDef xxxx,")
       .replaceAll("CTERelationRef \\d+,", s"CTERelationRef xxxx,")
       .replaceAll("@\\w*,", s"@xxxxxxxx,")
+      .replaceAll("\\*\\(\\d+\\) ", "*") // remove the WholeStageCodegen codegenStageIds
+  }
+
+  protected def replaceNotIncludedMsgJson(line: String): String = {
+    print("\n\n ****  line *** : " + line + "\n\n")
+    line.replaceAll("#\\d+", "#x")
+      .replaceAll("plan_id=\\d+", "plan_id=x")
+      .replaceAll(
+        s""""Location":.*?$clsName/""",
+        s""""Location $notIncludedMsg":"None""")
+      .replaceAll(s"""file:[^\\s,]*$clsName""", s"""file:$notIncludedMsg/{warehouse_dir}""")
+      .replaceAll(s""""Created By":".*?"""", s""""Created By $notIncludedMsg":"None"""")
+      .replaceAll(s""""Created Time":".*?"""", s""""Created Time $notIncludedMsg":"None"""")
+      .replaceAll(s""""Last Access":".*?"""", s""""Last Access $notIncludedMsg":"None"""")
+      .replaceAll(s""""Owner":".*?"""", s""""Owner $notIncludedMsg":"None"""")
+      .replaceAll(s""""Partition Statistics":"\\d+"""",
+        s""""Partition Statistics $notIncludedMsg":"None"""")
+      .replaceAll("CTERelationDef \\d+,", "CTERelationDef xxxx,")
+      .replaceAll("CTERelationRef \\d+,", "CTERelationRef xxxx,")
+      .replaceAll("@\\w*,", "@xxxxxxxx,")
       .replaceAll("\\*\\(\\d+\\) ", "*") // remove the WholeStageCodegen codegenStageIds
   }
 
@@ -125,8 +146,20 @@ trait SQLQueryTestHelper extends Logging {
     val df = session.sql(sql)
     val schema = df.schema.catalogString
     // Get answer, but also get rid of the #1234 expression ids that show up in explain plans
-    val answer = SQLExecution.withNewExecutionId(df.queryExecution, Some(sql)) {
-      hiveResultString(df.queryExecution.executedPlan).map(replaceNotIncludedMsg)
+//    val answer = SQLExecution.withNewExecutionId(df.queryExecution, Some(sql)) {
+//      print("\n ^^^^^^^^ hiveResultString ^^^^^ \n ")
+//      print(hiveResultString(df.queryExecution.executedPlan).map(replaceNotIncludedMsg))
+//      hiveResultString(df.queryExecution.executedPlan).map(replaceNotIncludedMsg)
+//    }
+    val answer = if (sql.contains("AS JSON")) {
+      SQLExecution.withNewExecutionId(df.queryExecution, Some(sql)) {
+        hiveResultString(df.queryExecution.executedPlan).map(replaceNotIncludedMsgJson)
+      }
+    } else {
+      SQLExecution.withNewExecutionId(df.queryExecution, Some(sql)) {
+          print(hiveResultString(df.queryExecution.executedPlan).map(replaceNotIncludedMsg))
+          hiveResultString(df.queryExecution.executedPlan).map(replaceNotIncludedMsg)
+      }
     }
 
     // If the output is not pre-sorted, sort it.

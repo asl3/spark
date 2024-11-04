@@ -31,7 +31,7 @@ import org.apache.spark.sql.connector.read.SupportsReportStatistics
 import org.apache.spark.sql.errors.QueryExecutionErrors
 import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.util.CaseInsensitiveStringMap
-import org.apache.spark.unsafe.types.UTF8String
+ import org.apache.spark.unsafe.types.UTF8String
 import org.apache.spark.util.ArrayImplicits._
 
 case class DescribeTableExec(
@@ -53,14 +53,16 @@ case class DescribeTableExec(
 
     if (!asJson) {
       rows.toSeq
+//      Seq.empty
     } else {
-      val jsonArray = rows.map { row =>
+      val jsonObject = rows.map { row =>
         val schema = table.schema
         val rowAsRow = internalRowToRow(row, schema)
         rowToJson(rowAsRow)
-      }.mkString("[", ",", "]")
+      }.mkString
 
-      Seq(InternalRow(UTF8String.fromString(jsonArray)))
+      val wrappedJson = s"""{"schema": $jsonObject}"""
+      Seq(InternalRow(UTF8String.fromString(wrappedJson)))
     }
   }
 

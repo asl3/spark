@@ -23,13 +23,40 @@ DESCRIBE t;
 
 DESCRIBE t AS JSON;
 
+CREATE TABLE t2 (
+    a STRING,
+    b INT,
+    c STRING,
+    d STRING
+)
+USING parquet
+OPTIONS (
+    a '1',
+    b '2',
+    password 'password'
+)
+PARTITIONED BY (c, d)
+CLUSTERED BY (a) SORTED BY (b ASC) INTO 2 BUCKETS
+COMMENT 'table_comment'
+TBLPROPERTIES (
+    t 'test',
+    password 'password'
+);
+
+-- test DESCRIBE with clustering info
+DESC t2;
+
 DESC default.t;
 
 DESC TABLE t;
 
 DESC FORMATTED t;
 
+DESC FORMATTED t AS JSON;
+
 DESC EXTENDED t;
+
+DESC EXTENDED t AS JSON;
 
 ALTER TABLE t UNSET TBLPROPERTIES (e);
 
@@ -60,6 +87,8 @@ DESC t PARTITION (c='Us', d);
 
 DESC temp_v;
 
+DESC temp_v AS JSON;
+
 DESC TABLE temp_v;
 
 DESC FORMATTED temp_v;
@@ -86,6 +115,7 @@ DESC v PARTITION (c='Us', d=1);
 
 -- Explain Describe Table
 EXPLAIN DESC t;
+EXPLAIN DESC t AS JSON;
 EXPLAIN DESC EXTENDED t;
 EXPLAIN EXTENDED DESC t;
 EXPLAIN DESCRIBE t b;
