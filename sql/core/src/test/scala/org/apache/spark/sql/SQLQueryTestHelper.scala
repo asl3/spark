@@ -65,19 +65,18 @@ trait SQLQueryTestHelper extends Logging {
   }
 
   protected def replaceNotIncludedMsgJson(line: String): String = {
-    print("\n\n ****  line *** : " + line + "\n\n")
     line.replaceAll("#\\d+", "#x")
       .replaceAll("plan_id=\\d+", "plan_id=x")
       .replaceAll(
-        s""""Location":.*?$clsName/""",
-        s""""Location $notIncludedMsg":"None""")
+        s""""LOCATION":.*?$clsName/""",
+        s""""LOCATION $notIncludedMsg":"None""")
       .replaceAll(s"""file:[^\\s,]*$clsName""", s"""file:$notIncludedMsg/{warehouse_dir}""")
-      .replaceAll(s""""Created By":".*?"""", s""""Created By $notIncludedMsg":"None"""")
-      .replaceAll(s""""Created Time":".*?"""", s""""Created Time $notIncludedMsg":"None"""")
-      .replaceAll(s""""Last Access":".*?"""", s""""Last Access $notIncludedMsg":"None"""")
-      .replaceAll(s""""Owner":".*?"""", s""""Owner $notIncludedMsg":"None"""")
-      .replaceAll(s""""Partition Statistics":"\\d+"""",
-        s""""Partition Statistics $notIncludedMsg":"None"""")
+      .replaceAll(s""""CREATED_BY":".*?"""", s""""CREATED_BY $notIncludedMsg":"None"""")
+      .replaceAll(s""""CREATED_TIME":".*?"""", s""""CREATED_TIME $notIncludedMsg":"None"""")
+      .replaceAll(s""""LAST_ACCESS":".*?"""", s""""LAST_ACCESS $notIncludedMsg":"None"""")
+      .replaceAll(s""""OWNER":".*?"""", s""""OWNER $notIncludedMsg":"None"""")
+      .replaceAll(s""""PARTITION_STATISTICS":"\\d+"""",
+        s""""PARTITION_STATISTICS $notIncludedMsg":"None"""")
       .replaceAll("CTERelationDef \\d+,", "CTERelationDef xxxx,")
       .replaceAll("CTERelationRef \\d+,", "CTERelationRef xxxx,")
       .replaceAll("@\\w*,", "@xxxxxxxx,")
