@@ -819,7 +819,7 @@ case class DescribeTableCommand(
 
       val jsonString = compact(render(newJsonObject))
 
-      appendJson(buffer, "CLUSTERING_INFORMATION", jsonString)
+      appendJson(buffer, "clustering_information", jsonString)
     }
   }
 
@@ -852,7 +852,7 @@ case class DescribeTableCommand(
 
     val jsonString = compact(render(newJsonObject))
 
-    appendTopLevelJson(buffer, jsonString)
+    appendJson(buffer, "detailed_table_information", jsonString)
   }
 
   private def appendTopLevelJson(buffer: ArrayBuffer[Row], jsonObject: String): Unit = {
@@ -947,7 +947,7 @@ case class DescribeTableCommand(
 
     val jsonString = compact(render(detailedInfoJson))
 
-    appendTopLevelJson(buffer, jsonString)
+    appendJson(buffer, "detailed_partition_information", jsonString)
   }
 }
 
