@@ -83,4 +83,35 @@ class DescribeTableSuite extends v1.DescribeTableSuiteBase with CommandSuiteBase
           Row("Partition Provider", "Catalog", "")))
     }
   }
+
+  test("DESCRIBE TABLE EXTENDED AS JSON of a partitioned table") {
+    withNamespaceAndTable("ns", "table") { tbl =>
+      spark.sql(s"CREATE TABLE $tbl (id bigint, data string) $defaultUsing" +
+        " PARTITIONED BY (id)" +
+        " COMMENT 'this is a test table'" +
+        " LOCATION 'file:/tmp/testcat/table_name'")
+      val descriptionDf = spark.sql(s"DESCRIBE TABLE EXTENDED $tbl AS JSON")
+      assert(descriptionDf.count() == 1)
+      checkKeywordsExist(descriptionDf,
+        "\"columns\":[{\"id\":0,\"name\":\"data\"," +
+          "\"data_type\":\"string\",\"comment\":null}," +
+          "{\"id\":1,\"name\":\"id\",\"data_type\":\"bigint\",\"comment\":null}]",
+        "\"partition_information\":[{\"id\":0,\"name\":\"id\"," +
+          "\"data_type\":\"bigint\",\"comment\":null}],",
+        "\"detailed_table_information\":{\"catalog\":\"",
+        SESSION_CATALOG_NAME,
+        "\"database\":\"ns\",\"table\":\"table\"",
+        TableCatalog.PROP_OWNER,
+        Utils.getCurrentUserName(),
+        "last_access\":\"UNKNOWN\"",
+        "type\":\"EXTERNAL\",\"provider\":\"",
+        getProvider(),
+        "\"comment\":\"this is a test table\",\"table_properties\":",
+        "\"location\":\"file:/tmp/testcat/table_name\"," +
+        "\"serde_library\":\"org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe\"," +
+        "\"inputformat\":\"org.apache.hadoop.mapred.TextInputFormat\",\"outputformat\":" +
+        "\"org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat\",\"storage_properties\":" +
+        "\"[serialization.format=1]\",\"partition_provider\":\"Catalog\"}")
+    }
+  }
 }
