@@ -23,29 +23,6 @@ DESCRIBE t;
 
 DESCRIBE t AS JSON;
 
-CREATE TABLE t2 (
-    a STRING,
-    b INT,
-    c STRING,
-    d STRING
-)
-USING parquet
-OPTIONS (
-    a '1',
-    b '2',
-    password 'password'
-)
-PARTITIONED BY (c, d)
-CLUSTERED BY (a) SORTED BY (b ASC) INTO 2 BUCKETS
-COMMENT 'table_comment'
-TBLPROPERTIES (
-    t 'test',
-    password 'password'
-);
-
--- test DESCRIBE with clustering info
-DESC t2;
-
 DESC default.t;
 
 DESC TABLE t;
@@ -68,14 +45,20 @@ DESC EXTENDED t;
 
 DESC t PARTITION (c='Us', d=1);
 
+DESC t PARTITION (c='Us', d=1) AS JSON;
+
 DESC EXTENDED t PARTITION (c='Us', d=1);
 
 DESC FORMATTED t PARTITION (c='Us', d=1);
 
 DESC EXTENDED t PARTITION (C='Us', D=1);
 
+DESC EXTENDED t PARTITION (C='Us', D=1) AS JSON;
+
 -- NoSuchPartitionException: Partition not found in table
 DESC t PARTITION (c='Us', d=2);
+
+DESC t PARTITION (c='Us', d=2) AS JSON;
 
 -- AnalysisException: Partition spec is invalid
 DESC t PARTITION (c='Us');
@@ -90,6 +73,8 @@ DESC temp_v;
 DESC temp_v AS JSON;
 
 DESC TABLE temp_v;
+
+DESC TABLE temp_v AS JSON;
 
 DESC FORMATTED temp_v;
 
@@ -108,10 +93,14 @@ DESC TABLE v;
 
 DESC FORMATTED v;
 
+DESC FORMATTED v AS JSON;
+
 DESC EXTENDED v;
 
 -- AnalysisException DESC PARTITION is not allowed on a view
 DESC v PARTITION (c='Us', d=1);
+
+DESC v PARTITION (c='Us', d=1) AS JSON;
 
 -- Explain Describe Table
 EXPLAIN DESC t;
@@ -120,6 +109,7 @@ EXPLAIN DESC EXTENDED t;
 EXPLAIN EXTENDED DESC t;
 EXPLAIN DESCRIBE t b;
 EXPLAIN DESCRIBE t PARTITION (c='Us', d=2);
+EXPLAIN DESCRIBE t PARTITION (c='Us', d=2) AS JSON;
 
 -- DROP TEST TABLES/VIEWS
 DROP TABLE t;
@@ -135,9 +125,13 @@ CREATE TABLE d (a STRING DEFAULT 'default-value', b INT DEFAULT 42) USING parque
 
 DESC d;
 
+DESC d AS JSON;
+
 DESC EXTENDED d;
 
 DESC TABLE EXTENDED d;
+
+DESC TABLE EXTENDED d AS JSON;
 
 DESC FORMATTED d;
 
@@ -146,8 +140,37 @@ CREATE TABLE e (a STRING DEFAULT CONCAT('a\n b\n ', 'c\n d'), b INT DEFAULT 42) 
 
 DESC e;
 
+DESC e AS JSON;
+
 DESC EXTENDED e;
 
 DESC TABLE EXTENDED e;
 
 DESC FORMATTED e;
+
+DESC TABLE FORMATTED e AS JSON;
+
+-- test DESCRIBE with clustering info
+CREATE TABLE t2 (
+    a STRING,
+    b INT,
+    c STRING,
+    d STRING
+)
+USING parquet
+OPTIONS (
+    a '1',
+    b '2',
+    password 'password'
+)
+PARTITIONED BY (c, d)
+CLUSTERED BY (a) SORTED BY (b ASC) INTO 2 BUCKETS
+COMMENT 'table_comment'
+TBLPROPERTIES (
+    t 'test',
+    password 'password'
+);
+
+DESC t2;
+
+DESC t2 as json;

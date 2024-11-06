@@ -609,15 +609,16 @@ abstract class DescribeCommandBase extends LeafRunnableCommand {
     schema: StructType,
     buffer: ArrayBuffer[Row],
     header: Boolean): Unit = {
-    val columnsJson = schema.map { column =>
+    val columnsJson = schema.zipWithIndex.map { case (column, id) =>
       s"""{
-         |  "COLUMN_NAME": "${column.name}",
-         |  "DATA_TYPE": "${column.dataType.simpleString}",
-         |  "COMMENT": ${column.getComment().map(c => s"""$c""").getOrElse("null")}
+         |  "id": $id,
+         |  "name": "${column.name}",
+         |  "data_type": "${column.dataType.simpleString}",
+         |  "comment": ${column.getComment().map(c => s"""$c""").getOrElse("null")}
          |}""".stripMargin
     }.mkString("[", ",", "]")
 
-    appendJson(buffer, "COLUMNS", columnsJson)
+    appendJson(buffer, "columns", columnsJson)
   }
 
   protected def append(
@@ -728,30 +729,11 @@ case class DescribeTableCommand(
       }
 
       // If any columns have default values, append them to the result.
-      ResolveDefaultColumns.getDescribeMetadata(metadata.schema).foreach { row =>
- //        appendJson(result, row._1, row._2, row._3)
-      }
+      describeDefaultInfoJson(metadata, result)
     }
 
     result.toSeq
   }
-
-//  private def describeoldJsonInfo(table: CatalogTable, buffer: ArrayBuffer[Row]): Unit = {
-//    append(buffer, "# Partition Information", "", "")
-//
-//    table.partitionSchema.foreach {column =>
-//
-//      val jsonObject = result.map { row =>
-//        // We expect the first value as column name, second as data type
-//        val colName = row.getString(0)
-//        val dataType = row.getString(1)
-//
-//        // Format each field as "column_name": "data_type"
-//        s""""$colName": "$dataType""""
-//      }.mkString("{", ", ", "}")
-//    }
-//    describeSchemaJson(table.partitionSchema, buffer, header = true)
-//  }
 
   private def describePartitionInfo(table: CatalogTable, buffer: ArrayBuffer[Row]): Unit = {
     if (table.partitionColumnNames.nonEmpty) {
@@ -762,21 +744,31 @@ case class DescribeTableCommand(
 
   private def describePartitionInfoJson(table: CatalogTable, buffer: ArrayBuffer[Row]): Unit = {
     if (table.partitionColumnNames.nonEmpty) {
-      val newJsonObject = JArray(table.partitionSchema.map { column =>
-        JObject(
-          "COLUMN_NAME" -> JString(column.name),
-          "DATA_TYPE" -> JString(column.dataType.simpleString),
-          "COMMENT" -> (column.getComment() match {
-            case Some(comment) => JString(comment)
-            case None => JNull
-          })
-        )
-      }.toList)
+      val partitionColumnsJson = table.partitionSchema.zipWithIndex.map { case (column, id) =>
+        s"""{
+           |  "id": $id,
+           |  "name": "${column.name}",
+           |  "data_type": "${column.dataType.simpleString}",
+           |  "comment": ${column.getComment().map(c => s"""$c""").getOrElse("null")}
+           |}""".stripMargin
+      }.mkString("[", ",", "]")
 
-      val jsonString = compact(render(newJsonObject))
-
-      appendJson(buffer, "PARTITION_INFORMATION", jsonString)
+      appendJson(buffer, "partition_information", partitionColumnsJson)
     }
+  }
+
+  private def describeDefaultInfoJson(table: CatalogTable, buffer: ArrayBuffer[Row]): Unit = {
+    val partitionColumnsJson = ResolveDefaultColumns.getDescribeMetadata(table.schema)
+      .zipWithIndex.drop(2).map { case (row, id) =>
+      s"""{
+         |  "id": $id,
+         |  "name": "${row._1}",
+         |  "data_type": "${row._2}",
+         |  "comment": "${row._3}"
+         |}""".stripMargin
+    }.mkString("[", ",", "]")
+
+    appendJson(buffer, "default_values", partitionColumnsJson)
   }
 
   private def describeClusteringInfo(
@@ -814,9 +806,9 @@ case class DescribeTableCommand(
         )
         val (path, field) = nestedFieldOpt.get
         JObject(
-          "COLUMN_NAME" -> JString((path :+ field.name).map(quoteIfNeeded).mkString(".")),
-          "DATA_TYPE" -> JString(field.dataType.simpleString),
-          "COMMENT" -> (field.getComment() match {
+          "name" -> JString((path :+ field.name).map(quoteIfNeeded).mkString(".")),
+          "data_type" -> JString(field.dataType.simpleString),
+          "comment" -> (field.getComment() match {
             case Some(comment) => JString(comment)
             case None => JNull
           })
@@ -851,9 +843,9 @@ case class DescribeTableCommand(
       excludedTableInfo.contains(key)
     }
 
-    // Transform keys to uppercase and replace spaces with underscores
+    // Transform keys to lowercase and replace spaces with underscores
     val newJsonObject = JObject(filteredTableInfo.map { case (key, value) =>
-      key.toUpperCase().replace(" ", "_") -> JString(value)
+      key.toLowerCase().replace(" ", "_") -> JString(value)
     }.toList)
 
     val jsonString = compact(render(newJsonObject))
@@ -890,10 +882,10 @@ case class DescribeTableCommand(
   }
 
   private def describeDetailedPartitionInfoJson(
-                                             spark: SparkSession,
-                                             catalog: SessionCatalog,
-                                             metadata: CatalogTable,
-                                             result: ArrayBuffer[Row]): Unit = {
+     spark: SparkSession,
+     catalog: SessionCatalog,
+     metadata: CatalogTable,
+     result: ArrayBuffer[Row]): Unit = {
     if (metadata.tableType == CatalogTableType.VIEW) {
       throw QueryCompilationErrors.descPartitionNotAllowedOnView(table.identifier)
     }
@@ -936,7 +928,7 @@ case class DescribeTableCommand(
       "Database" -> JString(table.database),
       "Table" -> JString(tableIdentifier.table)
     ) merge JObject(partition.toLinkedHashMap.map { case (key, value) =>
-      key -> JString(value)
+      key.toLowerCase() -> JString(value)
     }.toList)
 
     val storageInfoJson = JObject(
@@ -945,7 +937,7 @@ case class DescribeTableCommand(
       }.toList
     ) merge JObject(
       table.storage.toLinkedHashMap.map { case (key, value) =>
-        key -> JString(value)
+        key.toLowerCase() -> JString(value)
       }.toList
     )
 

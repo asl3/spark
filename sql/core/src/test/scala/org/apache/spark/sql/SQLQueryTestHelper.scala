@@ -68,15 +68,15 @@ trait SQLQueryTestHelper extends Logging {
     line.replaceAll("#\\d+", "#x")
       .replaceAll("plan_id=\\d+", "plan_id=x")
       .replaceAll(
-        s""""LOCATION":.*?$clsName/""",
-        s""""LOCATION $notIncludedMsg":"None""")
+        s""""location":.*?$clsName/""",
+        s""""location": $notIncludedMsg/{warehouse_dir}/""")
       .replaceAll(s"""file:[^\\s,]*$clsName""", s"""file:$notIncludedMsg/{warehouse_dir}""")
-      .replaceAll(s""""CREATED_BY":".*?"""", s""""CREATED_BY $notIncludedMsg":"None"""")
-      .replaceAll(s""""CREATED_TIME":".*?"""", s""""CREATED_TIME $notIncludedMsg":"None"""")
-      .replaceAll(s""""LAST_ACCESS":".*?"""", s""""LAST_ACCESS $notIncludedMsg":"None"""")
-      .replaceAll(s""""OWNER":".*?"""", s""""OWNER $notIncludedMsg":"None"""")
-      .replaceAll(s""""PARTITION_STATISTICS":"\\d+"""",
-        s""""PARTITION_STATISTICS $notIncludedMsg":"None"""")
+      .replaceAll(s""""created_by":".*?"""", s""""created_by $notIncludedMsg":"None"""")
+      .replaceAll(s""""created_time":".*?"""", s""""created_time $notIncludedMsg":"None"""")
+      .replaceAll(s""""last_access":".*?"""", s""""last_access $notIncludedMsg":"None"""")
+      .replaceAll(s""""owner":".*?"""", s""""owner $notIncludedMsg":"None"""")
+      .replaceAll(s""""partition_statistics":"\\d+"""",
+        s""""partition_statistics $notIncludedMsg":"None"""")
       .replaceAll("CTERelationDef \\d+,", "CTERelationDef xxxx,")
       .replaceAll("CTERelationRef \\d+,", "CTERelationRef xxxx,")
       .replaceAll("@\\w*,", "@xxxxxxxx,")
