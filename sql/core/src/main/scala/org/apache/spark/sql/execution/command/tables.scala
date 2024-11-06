@@ -729,7 +729,9 @@ case class DescribeTableCommand(
       }
 
       // If any columns have default values, append them to the result.
-      describeDefaultInfoJson(metadata, result)
+      if (ResolveDefaultColumns.getDescribeMetadata(metadata.schema).nonEmpty) {
+        describeDefaultInfoJson(metadata, result)
+      }
     }
 
     result.toSeq
