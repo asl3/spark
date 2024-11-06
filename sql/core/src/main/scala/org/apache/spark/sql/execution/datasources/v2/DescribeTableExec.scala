@@ -20,7 +20,6 @@ package org.apache.spark.sql.execution.datasources.v2
 import scala.collection.mutable.ArrayBuffer
 import scala.jdk.CollectionConverters._
 
-// import org.apache.spark.sql.Row
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.catalog.{CatalogTableType, ClusterBySpec}
 import org.apache.spark.sql.catalyst.expressions.Attribute
@@ -29,9 +28,8 @@ import org.apache.spark.sql.connector.catalog.{CatalogV2Util, SupportsMetadataCo
 import org.apache.spark.sql.connector.expressions.{ClusterByTransform, IdentityTransform}
 import org.apache.spark.sql.connector.read.SupportsReportStatistics
 import org.apache.spark.sql.errors.QueryExecutionErrors
-// import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.util.CaseInsensitiveStringMap
- import org.apache.spark.unsafe.types.UTF8String
+import org.apache.spark.unsafe.types.UTF8String
 import org.apache.spark.util.ArrayImplicits._
 
 case class DescribeTableExec(
@@ -71,7 +69,6 @@ case class DescribeTableExec(
       addTableStatsJson(rows)
     }
 
-    // Wrap the result into a JSON structure
     val jsonOutput = rows.map(row => row.getString(0)).mkString(",")
     val wrappedJson = s"""{"table_description": [$jsonOutput]}"""
     Seq(InternalRow(UTF8String.fromString(wrappedJson)))
@@ -202,7 +199,6 @@ case class DescribeTableExec(
     }
 
     if (partitioningJson != null) {
-      // Add the JSON as an InternalRow to rows
       rows += InternalRow(UTF8String.fromString(partitioningJson))
     }
   }
@@ -329,7 +325,6 @@ case class DescribeTableExec(
       }.mkString("[", ",", "]")
     rows += toCatalystRow("Table Properties", properties, "")
 
-    // If any columns have default values, append them to the result.
     ResolveDefaultColumns.getDescribeMetadata(table.schema).foreach { row =>
       rows += toCatalystRow(row._1, row._2, row._3)
     }

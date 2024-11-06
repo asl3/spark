@@ -629,7 +629,7 @@ abstract class DescribeCommandBase extends LeafRunnableCommand {
   protected def appendJson(buffer: ArrayBuffer[Row], key: String, jsonObject: String): Unit = {
     val currentJson = buffer.headOption.map(row => parse(row.getString(0))).
       getOrElse(parse("""{}"""))
-    val newJson = parse(jsonObject)
+    val newJson = parse(jsonObject.replace(" ", ""))
     val updatedJson = currentJson merge JObject(key -> newJson)
 
     if (buffer.isEmpty) {
@@ -798,8 +798,7 @@ case class DescribeTableCommand(
 
   private def describeClusteringInfoJson(table: CatalogTable, buffer: ArrayBuffer[Row]): Unit = {
     table.clusterBySpec.foreach { clusterBySpec =>
-      // Create JSON array with clustering column details
-      val newJsonObject = JArray(clusterBySpec.columnNames.map { fieldNames =>
+      val clusteringColumnsJson = clusterBySpec.columnNames.map { fieldNames =>
         val nestedFieldOpt = table.schema.findNestedField(fieldNames.fieldNames.toIndexedSeq)
         assert(nestedFieldOpt.isDefined,
           "The clustering column " +
@@ -807,19 +806,14 @@ case class DescribeTableCommand(
             s"was not found in the table schema ${table.schema.catalogString}."
         )
         val (path, field) = nestedFieldOpt.get
-        JObject(
-          "name" -> JString((path :+ field.name).map(quoteIfNeeded).mkString(".")),
-          "data_type" -> JString(field.dataType.simpleString),
-          "comment" -> (field.getComment() match {
-            case Some(comment) => JString(comment)
-            case None => JNull
-          })
-        )
-      }.toList)
+        s"""{
+           |  "name": "${(path :+ field.name).map(quoteIfNeeded).mkString(".")}",
+           |  "data_type": "${field.dataType.simpleString}",
+           |  "comment": ${field.getComment().map(c => s""""$c"""").getOrElse("null")}
+           |}""".stripMargin
+      }.mkString("[", ",", "]")
 
-      val jsonString = compact(render(newJsonObject))
-
-      appendJson(buffer, "clustering_information", jsonString)
+      appendJson(buffer, "clustering_information", clusteringColumnsJson)
     }
   }
 
@@ -845,24 +839,11 @@ case class DescribeTableCommand(
       excludedTableInfo.contains(key)
     }
 
-    // Transform keys to lowercase and replace spaces with underscores
-    val newJsonObject = JObject(filteredTableInfo.map { case (key, value) =>
-      key.toLowerCase().replace(" ", "_") -> JString(value)
-    }.toList)
+    val tableInfoJson = filteredTableInfo.map { case (key, value) =>
+      s""" "${key.toLowerCase().replace(" ", "_")}": "$value" """
+    }.mkString("{", ",", "}")
 
-    val jsonString = compact(render(newJsonObject))
-
-    appendJson(buffer, "detailed_table_information", jsonString)
-  }
-
-  private def appendTopLevelJson(buffer: ArrayBuffer[Row], jsonObject: String): Unit = {
-    val currentJson = buffer.headOption.map(row => parse(row.getString(0)))
-      .getOrElse(parse("""{}"""))
-    val newJson = parse(jsonObject)
-
-    val updatedJson = currentJson merge newJson
-
-    buffer(0) = Row(compact(render(updatedJson)), "", "")
+    appendJson(buffer, "detailed_table_information", tableInfoJson)
   }
 
   private def describeDetailedPartitionInfo(
@@ -926,28 +907,30 @@ case class DescribeTableCommand(
     table: CatalogTable,
     partition: CatalogTablePartition,
     buffer: ArrayBuffer[Row]): Unit = {
-    val partitionInfoJson = JObject(
-      "Database" -> JString(table.database),
-      "Table" -> JString(tableIdentifier.table)
-    ) merge JObject(partition.toLinkedHashMap.map { case (key, value) =>
-      key.toLowerCase() -> JString(value)
-    }.toList)
 
-    val storageInfoJson = JObject(
-      table.bucketSpec.map(_.toLinkedHashMap).getOrElse(Map.empty).map { case (key, value) =>
-        key -> JString(value)
-      }.toList
-    ) merge JObject(
-      table.storage.toLinkedHashMap.map { case (key, value) =>
-        key.toLowerCase() -> JString(value)
-      }.toList
-    )
+    val partitionInfoJson =
+      s"""{
+         |  "database": "${table.database}",
+         |  "table": "${tableIdentifier.table}"
+         |}""".stripMargin
 
-    val detailedInfoJson = partitionInfoJson merge storageInfoJson
+    val storageInfoJson = table.bucketSpec.map(_.toLinkedHashMap).getOrElse(Map.empty)
+      .map { case (key, value) =>
+        s""""${key.toLowerCase().replace(" ", "_")}": "$value""""
+      }.mkString("{\n", ",\n", "\n}")
 
-    val jsonString = compact(render(detailedInfoJson))
+    val partitionLinkedMapJson = partition.toLinkedHashMap.map { case (key, value) =>
+      s""""${key.toLowerCase().replace(" ", "_")}": "$value""""
+    }.mkString("{\n", ",\n", "\n}")
 
-    appendJson(buffer, "detailed_partition_information", jsonString)
+    val detailedInfoJson =
+      s"""{
+         |  "partition_info": $partitionInfoJson,
+         |  "storage_info": $storageInfoJson,
+         |  "partition_data": $partitionLinkedMapJson
+         |}""".stripMargin
+
+    appendJson(buffer, "detailed_partition_information", detailedInfoJson)
   }
 }
 

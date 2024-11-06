@@ -46,7 +46,6 @@ trait SQLQueryTestHelper extends Logging {
   protected val validFileExtensions = ".sql"
 
   protected def replaceNotIncludedMsg(line: String): String = {
-    print("\n\n ****  line *** : " + line + "\n\n")
     line.replaceAll("#\\d+", "#x")
       .replaceAll("plan_id=\\d+", "plan_id=x")
       .replaceAll(
