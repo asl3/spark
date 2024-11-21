@@ -371,9 +371,7 @@ case class BucketSpec(
   }
 
   def toJsonCompatibleLinkedHashMap: mutable.LinkedHashMap[String, String] = {
-    println("**** enter BucketSpec.toJsonCompatibleLinkedHashMap")
     mutable.LinkedHashMap[String, String](
-//      "num_buckets" -> numBuckets.toString,
       "bucket_columns" -> bucketColumnNames.map(s => s""""$s"""").mkString("[", ", ", "]"),
       "sort_columns" -> sortColumnNames.map(s => s""""$s"""").mkString("[", ", ", "]")
     )
