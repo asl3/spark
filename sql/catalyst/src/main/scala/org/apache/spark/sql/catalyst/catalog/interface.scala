@@ -96,6 +96,27 @@ case class CatalogStorageFormat(
     }
     map
   }
+
+  def toJsonCompatibleLinkedHashMap: mutable.LinkedHashMap[String, String] = {
+    val map = new mutable.LinkedHashMap[String, String]()
+
+    locationUri.foreach(l => map.put("Location", s""""$l""""))
+    serde.foreach(s => map.put("Serde Library", s""""$s""""))
+    inputFormat.foreach(format => map.put("InputFormat", s""""$format""""))
+    outputFormat.foreach(format => map.put("OutputFormat", s""""$format""""))
+
+    if (compressed) map.put("Compressed", "true")
+
+    SQLConf.get.redactOptions(properties) match {
+      case props if props.isEmpty => // No-op
+      case props =>
+        val storagePropsJson = props.map { case (k, v) => s""""$k": "$v"""" }
+          .mkString("{", ", ", "}")
+        map.put("Storage Properties", storagePropsJson)
+    }
+
+    map
+  }
 }
 
 object CatalogStorageFormat {
@@ -137,6 +158,46 @@ case class CatalogTablePartition(
     }
     map.put("Last Access", lastAccess)
     stats.foreach(s => map.put("Partition Statistics", s.simpleString))
+    map
+  }
+
+  def toJsonCompatibleLinkedHashMap: mutable.LinkedHashMap[String, String] = {
+    val map = new mutable.LinkedHashMap[String, String]()
+
+    // Convert the spec to a JSON array of key-value strings
+    val specJson = spec.map { case (k, v) =>
+      val valueStr = v match {
+        case s: String => s""""$s""""
+        case _ => v
+      }
+      s""""${k}": $valueStr"""
+    }.mkString(", ")
+    map.put("Partition Values", s"{$specJson}")
+
+    // Add storage properties as-is if already JSON-compatible, else apply additional quoting
+    storage.toJsonCompatibleLinkedHashMap.map { case (k, v) =>
+      map.put(k, v)
+    }
+
+    // Format partition parameters as a JSON object with key-value pairs
+    if (parameters.nonEmpty) {
+      val paramString = SQLConf.get.redactOptions(parameters)
+        .map { case (k, v) => s""""${k}": $v""" }
+        .mkString(", ")
+      map.put("Partition Parameters", s"{$paramString}")
+    }
+
+    // Format created time and last access as string literals
+    map.put("Created Time", s""""${new Date(createTime).toString}"""")
+
+    val lastAccess = if (lastAccessTime <= 0) "\"UNKNOWN\""
+    else s""""${new Date(lastAccessTime).toString}""""
+
+    map.put("Last Access", lastAccess)
+
+    // Include stats as-is, if compatible with JSON; otherwise, wrap in quotes
+    stats.foreach(s => map.put("Partition Statistics", s""""${s.simpleString}""""))
+
     map
   }
 
@@ -306,6 +367,15 @@ case class BucketSpec(
       "Num Buckets" -> numBuckets.toString,
       "Bucket Columns" -> bucketColumnNames.map(quoteIdentifier).mkString("[", ", ", "]"),
       "Sort Columns" -> sortColumnNames.map(quoteIdentifier).mkString("[", ", ", "]")
+    )
+  }
+
+  def toJsonCompatibleLinkedHashMap: mutable.LinkedHashMap[String, String] = {
+    println("**** enter BucketSpec.toJsonCompatibleLinkedHashMap")
+    mutable.LinkedHashMap[String, String](
+//      "num_buckets" -> numBuckets.toString,
+      "bucket_columns" -> bucketColumnNames.map(s => s""""$s"""").mkString("[", ", ", "]"),
+      "sort_columns" -> sortColumnNames.map(s => s""""$s"""").mkString("[", ", ", "]")
     )
   }
 }
@@ -530,7 +600,7 @@ case class CatalogTable(
       SQLConf.get.redactOptions(properties.filter { case (k, _) => !k.startsWith(VIEW_PREFIX) })
         .toSeq.sortBy(_._1)
         .map(p => p._1 + "=" + p._2)
-    val partitionColumns = partitionColumnNames.map(quoteIdentifier).mkString("[", ", ", "]")
+    val partitionColumns = partitionColumnNames.mkString("[", ", ", "]")
     val lastAccess = {
       if (lastAccessTime <= 0) "UNKNOWN" else new Date(lastAccessTime).toString
     }
@@ -569,6 +639,73 @@ case class CatalogTable(
     if (tracksPartitionsInCatalog) map.put("Partition Provider", "Catalog")
     if (partitionColumnNames.nonEmpty) map.put("Partition Columns", partitionColumns)
     if (schema.nonEmpty) map.put("Schema", schema.treeString)
+
+    map
+  }
+
+  def toJsonCompatibleLinkedHashMap: mutable.LinkedHashMap[String, String] = {
+    val map = new mutable.LinkedHashMap[String, String]()
+
+    // Convert table properties to a JSON-compatible format
+    val tableProperties = SQLConf.get
+      .redactOptions(properties.filter { case (k, _) => !k.startsWith(VIEW_PREFIX) })
+      .toSeq.sortBy(_._1)
+      .map { case (k, v) => s""""$k": "$v"""" }
+      .mkString("{", ", ", "}")
+
+    // Convert partition columns to a JSON array
+    val partitionColumns = partitionColumnNames
+      .map(s => s""""$s"""")
+      .mkString("[", ", ", "]")
+
+    // Handle last access time, converting to a JSON-compatible string
+    val lastAccess =
+      if (lastAccessTime <= 0) "\"UNKNOWN\""
+      else s""""${new Date(lastAccessTime).toInstant.toString}""""
+
+    // Fill the map with key-value pairs, ensuring values are JSON-compatible strings
+    identifier.catalog.foreach(catalog => map.put("Catalog", s""""$catalog""""))
+    identifier.database.foreach(database => map.put("Database", s""""$database""""))
+    map.put("Table", s""""${identifier.table}"""")
+    if (owner != null && owner.nonEmpty) map.put("Owner", s""""$owner"""")
+    map.put("Created Time", s""""${new Date(createTime).toInstant.toString}"""")
+    map.put("Last Access", lastAccess)
+    map.put("Created By", s""""Spark $createVersion"""")
+    map.put("Type", s""""${tableType.name}"""")
+    provider.foreach(provider => map.put("Provider", s""""$provider""""))
+
+    // Add optional fields like bucket spec, comment, and view-related fields
+    bucketSpec.foreach(spec => map ++= spec.toLinkedHashMap)
+    comment.foreach(comment => map.put("Comment", s""""$comment""""))
+
+    // Handle view-specific fields if table is a view
+    if (tableType == CatalogTableType.VIEW) {
+      viewText.foreach(text => map.put("View Text", s""""$text""""))
+      viewOriginalText.foreach(originalText =>
+        map.put("View Original Text", s""""$originalText""""))
+      if (SQLConf.get.viewSchemaBindingEnabled) {
+        map.put("View Schema Mode", s""""$viewSchemaMode"""")
+      }
+      if (viewCatalogAndNamespace.nonEmpty) {
+        import org.apache.spark.sql.connector.catalog.CatalogV2Implicits._
+        map.put("View Catalog and Namespace", s""""${viewCatalogAndNamespace.quoted}"""")
+      }
+      if (viewQueryColumnNames.nonEmpty) {
+        val viewQueryColumns =
+          viewQueryColumnNames.map(col => s""""$col"""").mkString("[", ", ", "]")
+        map.put("View Query Output Columns", viewQueryColumns)
+      }
+    }
+
+    // Add table properties, statistics, and storage properties if present
+    if (tableProperties.nonEmpty) map.put("Table Properties", tableProperties)
+    stats.foreach(stat => map.put("Statistics", s""""${stat.simpleString}""""))
+    map ++= storage.toLinkedHashMap
+
+    // Include partition provider, columns, and schema if they are defined
+    if (tracksPartitionsInCatalog) map.put("Partition Provider", "\"Catalog\"")
+    if (partitionColumnNames.nonEmpty) map.put("Partition Columns", partitionColumns)
+    if (schema.nonEmpty) map.put("Schema", s""""${schema.treeString}"""")
 
     map
   }

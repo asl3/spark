@@ -1,3 +1,36 @@
+CREATE TABLE intervals (
+  id INT,
+  interval INTERVAL DAY TO HOUR,
+  age INT
+)
+PARTITIONED BY (id, age);
+
+INSERT INTO intervals (id, interval, age)
+VALUES
+  (1, INTERVAL '1 2' DAY TO HOUR, 22),
+  (2, INTERVAL '-3 4' DAY TO HOUR, 12),
+  (3, INTERVAL '10 12' DAY TO HOUR, 0);
+
+--ALTER TABLE intervals ADD PARTITION (id=5, age=33);
+--ALTER TABLE intervals ADD PARTITION (id=4, age=0);
+
+DESCRIBE FORMATTED intervals;
+
+DESCRIBE FORMATTED intervals PARTITION (id=2, age=12);
+
+CREATE TABLE complex (
+   a STRING,
+   b INT,
+   c STRUCT<name: STRING, details: STRUCT<age: INT, address: STRING>>,
+   d STRING
+) USING parquet
+OPTIONS (a '1', b '2', password 'password')
+PARTITIONED BY (b, d)
+COMMENT 'table_comment'
+TBLPROPERTIES (t 'test', password 'password');
+
+DESCRIBE FORMATTED complex AS JSON;
+
 CREATE TABLE t (a STRING, b INT, c STRING, d STRING) USING parquet
   OPTIONS (a '1', b '2', password 'password')
   PARTITIONED BY (c, d) CLUSTERED BY (a) SORTED BY (b ASC) INTO 2 BUCKETS

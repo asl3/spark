@@ -21,6 +21,7 @@ import java.net.{URI, URISyntaxException}
 
 import scala.collection.mutable.ArrayBuffer
 import scala.jdk.CollectionConverters._
+import scala.util.Try
 import scala.util.control.NonFatal
 
 import org.apache.hadoop.fs.{FileContext, FsConstants, Path}
@@ -611,9 +612,9 @@ abstract class DescribeCommandBase extends LeafRunnableCommand {
     header: Boolean): Unit = {
     val columnsJson = schema.zipWithIndex.map { case (column, id) =>
       s"""{
-         |  "id": $id,
+         |  "id": ${id + 1},
          |  "name": "${column.name}",
-         |  "data_type": "${column.dataType.simpleString}",
+         |  "type": ${column.dataType.describeJson},
          |  "comment": ${column.getComment().map(c => s"""$c""").getOrElse("null")}
          |}""".stripMargin
     }.mkString("[", ",", "]")
@@ -701,40 +702,134 @@ case class DescribeTableCommand(
     val result = new ArrayBuffer[Row]
     val catalog = sparkSession.sessionState.catalog
 
-    if (catalog.isTempView(table)) {
+    // Define `schema` based on the table type
+    val schema = if (catalog.isTempView(table)) {
       if (partitionSpec.nonEmpty) {
         throw QueryCompilationErrors.descPartitionNotAllowedOnTempView(table.identifier)
       }
-      val schema = catalog.getTempViewOrPermanentTableMetadata(table).schema
-      describeSchemaJson(schema, result, header = false)
+      catalog.getTempViewOrPermanentTableMetadata(table).schema
     } else {
       val metadata = catalog.getTableRawMetadata(table)
       if (metadata.schema.isEmpty) {
-        // In older version(prior to 2.1) of Spark, the table schema can be empty and should be
-        // inferred at runtime. We should still support it.
-        describeSchemaJson(sparkSession.table(metadata.identifier).schema, result, header = false)
+        // In older versions of Spark,
+        // the table schema can be empty and should be inferred at runtime.
+        sparkSession.table(metadata.identifier).schema
       } else {
-        describeSchemaJson(metadata.schema, result, header = false)
+        metadata.schema
       }
+    }
 
-      describePartitionInfoJson(metadata, result)
+    // Add tableName
+    addKeyValueToJson(result, "table_name", JString(table.table))
+
+    // If not temp view, add qualified_name
+
+    if (!catalog.isTempView(table)) {
+
+      // Combine any multi-level namespaces
+      val catalogNameArr = table.catalog.map(s => s""""$s"""").mkString("[", ",", "]")
+      val databaseNameArr = table.database.map(s => s""""$s"""").mkString("[", ",", "]")
+      addKeyValueToJson(result, "catalog_name", parse(catalogNameArr))
+      addKeyValueToJson(result, "database_name", parse(databaseNameArr))
+      val catalogFullName = table.catalog.mkString(".")
+      val databaseFullName = table.database.mkString(".")
+      val qualifiedName = s"$catalogFullName.$databaseFullName.${table.table}"
+      addKeyValueToJson(result, "qualified_name", JString(qualifiedName))
+    }
+
+    // Describe the cols
+    // TODO: Add these fields to the columns list: default, partition_index
+    describeColsJson(schema, result, header = false)
+
+    // If not temp view, add additional fields
+    if (!catalog.isTempView(table)) {
+      val metadata = catalog.getTableRawMetadata(table)
+
       describeClusteringInfoJson(metadata, result)
 
       if (partitionSpec.nonEmpty) {
+//      if (metadata.partitionColumnNames.nonEmpty) {
         // Outputs the partition-specific info for the DDL command:
         // "DESCRIBE [EXTENDED|FORMATTED] table_name PARTITION (partitionVal*)"
-        describeDetailedPartitionInfoJson(sparkSession, catalog, metadata, result)
-      } else if (isExtended) {
-        describeFormattedTableInfoJson(metadata, result)
-      }
+        // TODO: is this needed for json?
+        describePartitionInfoJson(sparkSession, catalog, metadata, result)
+      } else {
+        // TODO: revisit all the code in else block
+//      val excludedTableInfo = Set("Partition Columns", "Schema")
+//      val filteredTableInfo = metadata.toLinkedHashMap.filterNot { case (key, _) =>
+//        excludedTableInfo.contains(key)
+//      }
+//
+//      val tableInfoJson = filteredTableInfo.foreach { case (key, value) =>
+//        addKeyValueToJson(result, key, JString(value))
+//      }
 
-      // If any columns have default values, append them to the result.
-      if (ResolveDefaultColumns.getDescribeMetadata(metadata.schema).nonEmpty) {
-        describeDefaultInfoJson(metadata, result)
+        describeFormattedTableInfoJson(metadata, result)
       }
     }
 
     result.toSeq
+  }
+
+  private def normalizeJson(jsonStr: String): String = {
+    val parsedJson = parse(jsonStr)
+
+    def normalizeKeys(json: JValue): JValue = json match {
+      case JObject(fields) =>
+        JObject(fields.map { case (key, value) =>
+          val normalizedKey = key.toLowerCase().replace(" ", "_")
+          (normalizedKey, normalizeKeys(value))
+        })
+      case JArray(items) => JArray(items.map(normalizeKeys))
+      case other => other
+    }
+
+    compact(render(normalizeKeys(parsedJson)))
+  }
+
+  private def describeColsJson(
+    schema: StructType,
+    buffer: ArrayBuffer[Row],
+    header: Boolean): Unit = {
+
+    // Retrieve default column values if they exist
+    val defaultValuesMap = Option(ResolveDefaultColumns.getDescribeMetadata(schema))
+      .getOrElse(Seq.empty)
+      .collect { case (name, _, defaultValue) => name -> defaultValue }
+      .toMap
+
+    val columnsJson = schema.zipWithIndex.map { case (column, id) =>
+      val commentField = column.getComment().map(c => s""", "comment": "$c",""").getOrElse("")
+      val defaultValueJson = defaultValuesMap.get(column.name)
+        .map(defaultValue => s""", "default_value": "$defaultValue"""")
+        .getOrElse("")
+
+      s"""{
+         |  "id": ${id + 1},
+         |  "name": "${column.name}",
+         |  "type": ${column.dataType.describeJson}
+         |  $commentField
+         |  $defaultValueJson
+         |}""".stripMargin
+    }.mkString("[", ",", "]")
+
+    println("***** columnsJson *****")
+    println(columnsJson)
+
+    addKeyValueToJson(buffer, "columns", parse(columnsJson))
+  }
+
+
+  private def addKeyValueToJson(buffer: ArrayBuffer[Row], key: String, value: JValue): Unit = {
+    val currentJson = buffer.headOption.map(row => parse(row.getString(0))).getOrElse(JObject())
+    val updatedJson = currentJson merge JObject(key -> value)
+    val jsonString = compact(render(updatedJson))
+
+    if (buffer.isEmpty) {
+      buffer += Row(normalizeJson(jsonString), "", "")
+    } else {
+      buffer(0) = Row(normalizeJson(jsonString), "", "")
+    }
   }
 
   private def describePartitionInfo(table: CatalogTable, buffer: ArrayBuffer[Row]): Unit = {
@@ -744,18 +839,18 @@ case class DescribeTableCommand(
     }
   }
 
-  private def describePartitionInfoJson(table: CatalogTable, buffer: ArrayBuffer[Row]): Unit = {
+  private def describeOldPartitionInfoJson(table: CatalogTable, buffer: ArrayBuffer[Row]): Unit = {
     if (table.partitionColumnNames.nonEmpty) {
       val partitionColumnsJson = table.partitionSchema.zipWithIndex.map { case (column, id) =>
         s"""{
-           |  "id": $id,
+           |  "id": ${id + 1},
            |  "name": "${column.name}",
-           |  "data_type": "${column.dataType.simpleString}",
+           |  "type": ${column.dataType.describeJson},
            |  "comment": ${column.getComment().map(c => s"""$c""").getOrElse("null")}
            |}""".stripMargin
       }.mkString("[", ",", "]")
 
-      appendJson(buffer, "partition_information", partitionColumnsJson)
+      addKeyValueToJson(buffer, "partition_columns", parse(partitionColumnsJson))
     }
   }
 
@@ -763,9 +858,9 @@ case class DescribeTableCommand(
     val partitionColumnsJson = ResolveDefaultColumns.getDescribeMetadata(table.schema)
       .zipWithIndex.drop(2).map { case (row, id) =>
       s"""{
-         |  "id": $id,
+         |  "id": ${id + 1},
          |  "name": "${row._1}",
-         |  "data_type": "${row._2}",
+         |  "type": "${row._2}",
          |  "comment": "${row._3}"
          |}""".stripMargin
     }.mkString("[", ",", "]")
@@ -808,7 +903,7 @@ case class DescribeTableCommand(
         val (path, field) = nestedFieldOpt.get
         s"""{
            |  "name": "${(path :+ field.name).map(quoteIfNeeded).mkString(".")}",
-           |  "data_type": "${field.dataType.simpleString}",
+           |  "type": ${field.dataType.describeJson},
            |  "comment": ${field.getComment().map(c => s""""$c"""").getOrElse("null")}
            |}""".stripMargin
       }.mkString("[", ",", "]")
@@ -833,17 +928,52 @@ case class DescribeTableCommand(
   private def describeFormattedTableInfoJson(
     table: CatalogTable, buffer: ArrayBuffer[Row]): Unit = {
 
-    val excludedTableInfo = Set("Partition Columns", "Schema")
+    val excludedTableInfo = Set("catalog", "schema", "database", "table")
 
-    val filteredTableInfo = table.toLinkedHashMap.filterNot { case (key, _) =>
-      excludedTableInfo.contains(key)
+    val filteredTableInfo = table.toJsonCompatibleLinkedHashMap.filterNot { case (key, _) =>
+      excludedTableInfo.contains(key.toLowerCase())
     }
 
-    val tableInfoJson = filteredTableInfo.map { case (key, value) =>
-      s""" "${key.toLowerCase().replace(" ", "_")}": "$value" """
-    }.mkString("{", ",", "}")
+   filteredTableInfo.map { case (key, value) =>
+     val jsonValue: JValue =
+       Try(parse(value)) match {
+         case scala.util.Success(parsedJson) =>
+           parsedJson
+         case scala.util.Failure(_) =>
+           JString(value) // Fallback to JString if parsing fails
+       }
 
-    appendJson(buffer, "detailed_table_information", tableInfoJson)
+      addKeyValueToJson(buffer, key, jsonValue)
+    }
+
+    // Bucket info
+    table.bucketSpec match {
+      case Some(spec) =>
+        spec.toJsonCompatibleLinkedHashMap.map { case (key, value) =>
+          val jsonValue: JValue =
+            Try(parse(value)) match {
+              case scala.util.Success(parsedJson) =>
+                parsedJson
+              case scala.util.Failure(_) =>
+                JString(value) // Fallback to JString if parsing fails
+            }
+
+          addKeyValueToJson(buffer, key, jsonValue)
+        }
+      case _ =>
+    }
+    table.storage.toJsonCompatibleLinkedHashMap.map { case (key, value) =>
+      val jsonValue: JValue =
+        Try(parse(value)) match {
+          case scala.util.Success(parsedJson) =>
+            parsedJson
+          case scala.util.Failure(_) =>
+            JString(value) // Fallback to JString if parsing fails
+        }
+
+      addKeyValueToJson(buffer, key, jsonValue)
+    }
+
   }
 
   private def describeDetailedPartitionInfo(
@@ -864,23 +994,18 @@ case class DescribeTableCommand(
     if (isExtended) describeFormattedDetailedPartitionInfo(table, metadata, partition, result)
   }
 
-  private def describeDetailedPartitionInfoJson(
-     spark: SparkSession,
-     catalog: SessionCatalog,
-     metadata: CatalogTable,
-     result: ArrayBuffer[Row]): Unit = {
-    if (metadata.tableType == CatalogTableType.VIEW) {
-      throw QueryCompilationErrors.descPartitionNotAllowedOnView(table.identifier)
-    }
-    DDLUtils.verifyPartitionProviderIsHive(spark, metadata, "DESC PARTITION")
-    val normalizedPartSpec = PartitioningUtils.normalizePartitionSpec(
-      partitionSpec,
-      metadata.partitionSchema,
-      table.quotedString,
-      spark.sessionState.conf.resolver)
-    val partition = catalog.getPartition(table, normalizedPartSpec)
-    if (isExtended) describeFormattedDetailedPartitionInfoJson(table, metadata, partition, result)
-  }
+//  private def describePartitionInfoJson(
+//     spark: SparkSession,
+//     catalog: SessionCatalog,
+//     metadata: CatalogTable,
+//     result: ArrayBuffer[Row]): Unit = {
+//    if (metadata.tableType == CatalogTableType.VIEW) {
+//      throw QueryCompilationErrors.descPartitionNotAllowedOnView(table.identifier)
+//    }
+//
+//    // TODO: combine into same method
+//    describeFormattedDetailedPartitionInfoJson(table, metadata, partition, result)
+//  }
 
   private def describeFormattedDetailedPartitionInfo(
       tableIdentifier: TableIdentifier,
@@ -902,35 +1027,87 @@ case class DescribeTableCommand(
     table.storage.toLinkedHashMap.foreach(s => append(buffer, s._1, s._2, ""))
   }
 
-  private def describeFormattedDetailedPartitionInfoJson(
-    tableIdentifier: TableIdentifier,
-    table: CatalogTable,
-    partition: CatalogTablePartition,
-    buffer: ArrayBuffer[Row]): Unit = {
+  private def describePartitionInfoJson(
+   spark: SparkSession,
+   catalog: SessionCatalog,
+   metadata: CatalogTable,
+   buffer: ArrayBuffer[Row]): Unit = {
 
-    val partitionInfoJson =
-      s"""{
-         |  "database": "${table.database}",
-         |  "table": "${tableIdentifier.table}"
-         |}""".stripMargin
+    // partition spec in DESCRIBE
+//    if (partitionSpec.nonEmpty) {
+      if (metadata.tableType == CatalogTableType.VIEW) {
+        throw QueryCompilationErrors.descPartitionNotAllowedOnView(table.identifier)
+      }
 
-    val storageInfoJson = table.bucketSpec.map(_.toLinkedHashMap).getOrElse(Map.empty)
-      .map { case (key, value) =>
-        s""""${key.toLowerCase().replace(" ", "_")}": "$value""""
-      }.mkString("{\n", ",\n", "\n}")
+      DDLUtils.verifyPartitionProviderIsHive(spark, metadata, "DESC PARTITION")
+      val normalizedPartSpec = PartitioningUtils.normalizePartitionSpec(
+        partitionSpec,
+        metadata.partitionSchema,
+        table.quotedString,
+        spark.sessionState.conf.resolver)
+      val partition = catalog.getPartition(table, normalizedPartSpec)
 
-    val partitionLinkedMapJson = partition.toLinkedHashMap.map { case (key, value) =>
-      s""""${key.toLowerCase().replace(" ", "_")}": "$value""""
-    }.mkString("{\n", ",\n", "\n}")
+      partition.toJsonCompatibleLinkedHashMap.map { case (key, value) =>
+        // Try to parse the value as JSON if it's array-like or object-like
+        val jsonValue: JValue =
+          Try(parse(value)) match {
+            case scala.util.Success(parsedJson) =>
+              parsedJson
+            case scala.util.Failure(_) =>
+              JString(value) // Fallback to JString if parsing fails
+          }
 
-    val detailedInfoJson =
-      s"""{
-         |  "partition_info": $partitionInfoJson,
-         |  "storage_info": $storageInfoJson,
-         |  "partition_data": $partitionLinkedMapJson
-         |}""".stripMargin
+        addKeyValueToJson(buffer, key, jsonValue)
+      }
 
-    appendJson(buffer, "detailed_partition_information", detailedInfoJson)
+    val excludedTableInfo = Set("catalog", "schema", "database", "table", "partition_columns")
+
+    val detailedInfo = metadata.toJsonCompatibleLinkedHashMap.filterNot { case (key, _) =>
+      excludedTableInfo.contains(key.toLowerCase())
+    }
+
+    detailedInfo.map { case (key, value) =>
+      val jsonValue: JValue =
+        Try(parse(value)) match {
+          case scala.util.Success(parsedJson) =>
+            parsedJson
+          case scala.util.Failure(_) =>
+            JString(value) // Fallback to JString if parsing fails
+        }
+
+      addKeyValueToJson(buffer, key, jsonValue)
+    }
+
+      // Bucket info
+      metadata.bucketSpec match {
+        case Some(spec) =>
+          spec.toJsonCompatibleLinkedHashMap.map { case (key, value) =>
+            val jsonValue: JValue =
+              Try(parse(value)) match {
+                case scala.util.Success(parsedJson) =>
+                  parsedJson
+                case scala.util.Failure(_) =>
+                  JString(value) // Fallback to JString if parsing fails
+              }
+
+            addKeyValueToJson(buffer, key, jsonValue)
+          }
+        case _ =>
+      }
+      metadata.storage.toJsonCompatibleLinkedHashMap.map { case (key, value) =>
+        val jsonValue: JValue =
+          Try(parse(value)) match {
+            case scala.util.Success(parsedJson) =>
+              parsedJson
+            case scala.util.Failure(_) =>
+              JString(value) // Fallback to JString if parsing fails
+          }
+
+        addKeyValueToJson(buffer, key, jsonValue)
+      }
+//    } else {
+//      describeColsJson(metadata.partitionSchema, buffer, header = true)
+//    }
   }
 }
 

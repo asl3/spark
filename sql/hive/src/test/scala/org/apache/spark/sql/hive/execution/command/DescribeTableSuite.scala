@@ -86,12 +86,19 @@ class DescribeTableSuite extends v1.DescribeTableSuiteBase with CommandSuiteBase
 
   test("DESCRIBE TABLE EXTENDED AS JSON of a partitioned table") {
     withNamespaceAndTable("ns", "table") { tbl =>
-      spark.sql(s"CREATE TABLE $tbl (id bigint, data string) $defaultUsing" +
+      spark.sql("SET hive.exec.dynamic.partition.mode = nonstrict;")
+      spark.sql(
+        s"CREATE TABLE $tbl (id bigint, data array<string>, age int DEFAULT 2) $defaultUsing" +
         " PARTITIONED BY (id)" +
         " COMMENT 'this is a test table'" +
         " LOCATION 'file:/tmp/testcat/table_name'")
-      val descriptionDf = spark.sql(s"DESCRIBE TABLE EXTENDED $tbl AS JSON")
-      assert(descriptionDf.count() == 1)
+      spark.sql(
+        s"INSERT INTO $tbl (id, data, age) VALUES(1, ARRAY('a'), 2)")
+      val descriptionDf = spark.sql(s"DESCRIBE TABLE EXTENDED $tbl PARTITION (id='1') AS JSON")
+      println("\n ************* \n ")
+      val firstRow = descriptionDf.select("col_name").head()
+      val jsonValue = firstRow.getString(0)
+      println(jsonValue)
       checkKeywordsExist(descriptionDf,
         "\"columns\":[{\"id\":0,\"name\":\"data\"," +
           "\"data_type\":\"string\",\"comment\":null}," +
@@ -112,6 +119,216 @@ class DescribeTableSuite extends v1.DescribeTableSuiteBase with CommandSuiteBase
         "\"inputformat\":\"org.apache.hadoop.mapred.TextInputFormat\",\"outputformat\":" +
         "\"org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat\",\"storage_properties\":" +
         "\"[serialization.format=1]\",\"partition_provider\":\"Catalog\"}")
+    }
+  }
+
+  test("DESCRIBE AS JSON golden file test 1") {
+    withNamespaceAndTable("ns", "table") { tbl =>
+      val tableCreationStr =
+        """
+          |CREATE TABLE t (a STRING, b INT, c STRING, d STRING) USING parquet
+          |  OPTIONS (a '1', b '2', password 'password')
+          |  PARTITIONED BY (c, d) CLUSTERED BY (a) SORTED BY (b ASC) INTO 2 BUCKETS
+          |  COMMENT 'table_comment'
+          |  TBLPROPERTIES (t 'test', password 'password')
+          |""".stripMargin
+      spark.sql(tableCreationStr)
+      val descriptionDf = spark.sql(s"DESCRIBE t AS JSON")
+      println("\n ************* \n ")
+      val firstRow = descriptionDf.select("col_name").head()
+      val jsonValue = firstRow.getString(0)
+      println(jsonValue)
+      checkKeywordsExist(descriptionDf,
+        "\"columns\":[{\"id\":0,\"name\":\"data\"," +
+          "\"data_type\":\"string\",\"comment\":null}," +
+          "{\"id\":1,\"name\":\"id\",\"data_type\":\"bigint\",\"comment\":null}]",
+        "\"partition_information\":[{\"id\":0,\"name\":\"id\"," +
+          "\"data_type\":\"bigint\",\"comment\":null}],",
+        "\"detailed_table_information\":{\"catalog\":\"",
+        SESSION_CATALOG_NAME,
+        "\"database\":\"ns\",\"table\":\"table\"",
+        TableCatalog.PROP_OWNER,
+        Utils.getCurrentUserName(),
+        "last_access\":\"UNKNOWN\"",
+        "type\":\"EXTERNAL\",\"provider\":\"",
+        getProvider(),
+        "\"comment\":\"this is a test table\",\"table_properties\":",
+        "\"location\":\"file:/tmp/testcat/table_name\"," +
+          "\"serde_library\":\"org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe\"," +
+          "\"inputformat\":\"org.apache.hadoop.mapred.TextInputFormat\",\"outputformat\":" +
+          "\"org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat\",\"storage_properties\":" +
+          "\"[serialization.format=1]\",\"partition_provider\":\"Catalog\"}")
+    }
+  }
+
+  test("DESCRIBE AS JSON golden file test 2") {
+    withNamespaceAndTable("ns", "table") { tbl =>
+      val tableCreationStr =
+        """
+          |CREATE TABLE t (a STRING, b INT, c STRING, d STRING) USING parquet
+          |  OPTIONS (a '1', b '2', password 'password')
+          |  PARTITIONED BY (c, d) CLUSTERED BY (a) SORTED BY (b ASC) INTO 2 BUCKETS
+          |  COMMENT 'table_comment'
+          |  TBLPROPERTIES (t 'test', password 'password')
+          |""".stripMargin
+      spark.sql(tableCreationStr)
+      spark.sql("ALTER TABLE t ADD PARTITION (c='Us', d=1)")
+      val descriptionDf = spark.sql(s"DESCRIBE t PARTITION (c='Us', d=1) AS JSON")
+      println("\n ************* \n ")
+      val firstRow = descriptionDf.select("col_name").head()
+      val jsonValue = firstRow.getString(0)
+      println(jsonValue)
+      checkKeywordsExist(descriptionDf,
+        "\"columns\":[{\"id\":0,\"name\":\"data\"," +
+          "\"data_type\":\"string\",\"comment\":null}," +
+          "{\"id\":1,\"name\":\"id\",\"data_type\":\"bigint\",\"comment\":null}]",
+        "\"partition_information\":[{\"id\":0,\"name\":\"id\"," +
+          "\"data_type\":\"bigint\",\"comment\":null}],",
+        "\"detailed_table_information\":{\"catalog\":\"",
+        SESSION_CATALOG_NAME,
+        "\"database\":\"ns\",\"table\":\"table\"",
+        TableCatalog.PROP_OWNER,
+        Utils.getCurrentUserName(),
+        "last_access\":\"UNKNOWN\"",
+        "type\":\"EXTERNAL\",\"provider\":\"",
+        getProvider(),
+        "\"comment\":\"this is a test table\",\"table_properties\":",
+        "\"location\":\"file:/tmp/testcat/table_name\"," +
+          "\"serde_library\":\"org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe\"," +
+          "\"inputformat\":\"org.apache.hadoop.mapred.TextInputFormat\",\"outputformat\":" +
+          "\"org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat\",\"storage_properties\":" +
+          "\"[serialization.format=1]\",\"partition_provider\":\"Catalog\"}")
+    }
+  }
+
+  test("DESCRIBE AS JSON golden file test 3") {
+    withNamespaceAndTable("ns", "table") { tbl =>
+      val tableCreationStr =
+        """
+          |CREATE TABLE d (a STRING DEFAULT 'default-value', b INT DEFAULT 42)
+          |USING parquet COMMENT 'table_comment'
+          |""".stripMargin
+      spark.sql(tableCreationStr)
+      val descriptionDf = spark.sql(s"DESC d AS JSON")
+      println("\n ************* \n ")
+      val firstRow = descriptionDf.select("col_name").head()
+      val jsonValue = firstRow.getString(0)
+      println(jsonValue)
+      checkKeywordsExist(descriptionDf,
+        "\"columns\":[{\"id\":0,\"name\":\"data\"," +
+          "\"data_type\":\"string\",\"comment\":null}," +
+          "{\"id\":1,\"name\":\"id\",\"data_type\":\"bigint\",\"comment\":null}]",
+        "\"partition_information\":[{\"id\":0,\"name\":\"id\"," +
+          "\"data_type\":\"bigint\",\"comment\":null}],",
+        "\"detailed_table_information\":{\"catalog\":\"",
+        SESSION_CATALOG_NAME,
+        "\"database\":\"ns\",\"table\":\"table\"",
+        TableCatalog.PROP_OWNER,
+        Utils.getCurrentUserName(),
+        "last_access\":\"UNKNOWN\"",
+        "type\":\"EXTERNAL\",\"provider\":\"",
+        getProvider(),
+        "\"comment\":\"this is a test table\",\"table_properties\":",
+        "\"location\":\"file:/tmp/testcat/table_name\"," +
+          "\"serde_library\":\"org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe\"," +
+          "\"inputformat\":\"org.apache.hadoop.mapred.TextInputFormat\",\"outputformat\":" +
+          "\"org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat\",\"storage_properties\":" +
+          "\"[serialization.format=1]\",\"partition_provider\":\"Catalog\"}")
+    }
+  }
+
+  test("DESCRIBE AS JSON golden file test 4") {
+    withNamespaceAndTable("ns", "table") { tbl =>
+      val tableCreationStr =
+        """
+          |CREATE TABLE t (a STRING, b INT, c STRING, d STRING) USING parquet
+          |  OPTIONS (a '1', b '2', password 'password')
+          |  PARTITIONED BY (c, d) CLUSTERED BY (a) SORTED BY (b ASC) INTO 2 BUCKETS
+          |  COMMENT 'table_comment'
+          |  TBLPROPERTIES (t 'test', password 'password')
+          |""".stripMargin
+      spark.sql(tableCreationStr)
+      spark.sql("CREATE TEMPORARY VIEW temp_v AS SELECT * FROM t")
+      val descriptionDf = spark.sql(s"DESCRIBE temp_v AS JSON")
+      println("\n ************* \n ")
+      val firstRow = descriptionDf.select("col_name").head()
+      val jsonValue = firstRow.getString(0)
+      println(jsonValue)
+      checkKeywordsExist(descriptionDf,
+        "\"columns\":[{\"id\":0,\"name\":\"data\"," +
+          "\"data_type\":\"string\",\"comment\":null}," +
+          "{\"id\":1,\"name\":\"id\",\"data_type\":\"bigint\",\"comment\":null}]",
+        "\"partition_information\":[{\"id\":0,\"name\":\"id\"," +
+          "\"data_type\":\"bigint\",\"comment\":null}],",
+        "\"detailed_table_information\":{\"catalog\":\"",
+        SESSION_CATALOG_NAME,
+        "\"database\":\"ns\",\"table\":\"table\"",
+        TableCatalog.PROP_OWNER,
+        Utils.getCurrentUserName(),
+        "last_access\":\"UNKNOWN\"",
+        "type\":\"EXTERNAL\",\"provider\":\"",
+        getProvider(),
+        "\"comment\":\"this is a test table\",\"table_properties\":",
+        "\"location\":\"file:/tmp/testcat/table_name\"," +
+          "\"serde_library\":\"org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe\"," +
+          "\"inputformat\":\"org.apache.hadoop.mapred.TextInputFormat\",\"outputformat\":" +
+          "\"org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat\",\"storage_properties\":" +
+          "\"[serialization.format=1]\",\"partition_provider\":\"Catalog\"}")
+    }
+  }
+
+  test("DESCRIBE AS JSON golden file test 5") {
+    withNamespaceAndTable("ns", "table") { tbl =>
+      val tableCreationStr =
+        """
+          |CREATE TABLE c (
+          |  id STRING,
+          |  nested_struct STRUCT<
+          |    name: STRING,
+          |    age: INT,
+          |    contact: STRUCT<
+          |      email: STRING,
+          |      phone_numbers: ARRAY<STRING>,
+          |      addresses: ARRAY<STRUCT<
+          |        street: STRING,
+          |        city: STRING,
+          |        zip: INT
+          |      >>
+          |    >
+          |  >,
+          |  preferences MAP<STRING, ARRAY<STRING>>
+          |) USING parquet
+          |  OPTIONS (option1 'value1', option2 'value2')
+          |  PARTITIONED BY (id)
+          |  COMMENT 'A table with nested complex types'
+          |  TBLPROPERTIES ('property1' = 'value1', 'password' = 'password')
+        """.stripMargin
+      spark.sql(tableCreationStr)
+      val descriptionDf = spark.sql(s"DESCRIBE c AS JSON")
+      println("\n ************* \n ")
+      val firstRow = descriptionDf.select("col_name").head()
+      val jsonValue = firstRow.getString(0)
+      println(jsonValue)
+      checkKeywordsExist(descriptionDf,
+        "\"columns\":[{\"id\":0,\"name\":\"data\"," +
+          "\"data_type\":\"string\",\"comment\":null}," +
+          "{\"id\":1,\"name\":\"id\",\"data_type\":\"bigint\",\"comment\":null}]",
+        "\"partition_information\":[{\"id\":0,\"name\":\"id\"," +
+          "\"data_type\":\"bigint\",\"comment\":null}],",
+        "\"detailed_table_information\":{\"catalog\":\"",
+        SESSION_CATALOG_NAME,
+        "\"database\":\"ns\",\"table\":\"table\"",
+        TableCatalog.PROP_OWNER,
+        Utils.getCurrentUserName(),
+        "last_access\":\"UNKNOWN\"",
+        "type\":\"EXTERNAL\",\"provider\":\"",
+        getProvider(),
+        "\"comment\":\"this is a test table\",\"table_properties\":",
+        "\"location\":\"file:/tmp/testcat/table_name\"," +
+          "\"serde_library\":\"org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe\"," +
+          "\"inputformat\":\"org.apache.hadoop.mapred.TextInputFormat\",\"outputformat\":" +
+          "\"org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat\",\"storage_properties\":" +
+          "\"[serialization.format=1]\",\"partition_provider\":\"Catalog\"}")
     }
   }
 }

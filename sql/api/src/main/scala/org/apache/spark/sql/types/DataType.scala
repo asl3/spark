@@ -72,6 +72,37 @@ abstract class DataType extends AbstractDataType {
   /** The pretty (i.e. indented) JSON representation of this data type. */
   def prettyJson: String = pretty(render(jsonValue))
 
+  // TODO: comment to provide context for why this is added
+  //  (for describe json API, for json parsing reasons)
+  def describeJson: String = {
+    this match {
+      case arrayType: ArrayType =>
+        val elementTypeJson = arrayType.elementType.describeJson
+        s"""{"type": "array",
+           |"elementType": $elementTypeJson,
+           |"containsNull": ${arrayType.containsNull}}""".stripMargin
+
+      case mapType: MapType =>
+        val keyTypeJson = mapType.keyType.describeJson
+        val valueTypeJson = mapType.valueType.describeJson
+        s"""{"type": "map",
+           |"keyType": $keyTypeJson,
+           |"valueType": $valueTypeJson,
+           |"valueContainsNull": ${mapType.valueContainsNull}}""".stripMargin
+
+      case structType: StructType =>
+        val fieldsJson = structType.fields.map { field =>
+          val fieldTypeJson = field.dataType.describeJson
+          s"""{"name": "${field.name}", "type": $fieldTypeJson, "nullable": ${field.nullable}}"""
+        }.mkString(", ")
+        s"""{"type": "struct", "fields": [$fieldsJson]}"""
+
+      // Base case for simple types
+      case _ =>
+        s"""{"type": "$typeName"}"""
+    }
+  }
+
   /** Readable string representation for the type. */
   def simpleString: String = typeName
 

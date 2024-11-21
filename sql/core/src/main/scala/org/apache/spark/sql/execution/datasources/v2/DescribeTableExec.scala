@@ -84,7 +84,7 @@ case class DescribeTableExec(
     val schemaJson = table.schema.map { column =>
       s"""{
          |  "name": "${column.name}",
-         |  "data_type": "${column.dataType.simpleString}",
+         |  "data_type": "${column.dataType.describeJson}",
          |  "comment": ${column.getComment().map(c => s""""$c"""").getOrElse("null")}
          |}""".stripMargin
     }.mkString("[", ",", "]")
@@ -109,7 +109,7 @@ case class DescribeTableExec(
     val metadataJson = table.schema.map { column =>
       s"""{
          |  "name": "${column.name}",
-         |  "data_type": "${column.dataType.simpleString}",
+         |  "data_type": "${column.dataType.describeJson}",
          |  "comment": ${column.getComment().map(c => s""""$c"""").getOrElse("null")}
          |}""".stripMargin
     }.mkString("[", ",", "]")
@@ -168,7 +168,7 @@ case class DescribeTableExec(
             case Some((path, field)) =>
               s"""{
                  |  "${output(0).name}": "${(path :+ field.name).map(quoteIfNeeded).mkString(".")}",
-                 |  "${output(1).name}": "${field.dataType.simpleString}",
+                 |  "${output(1).name}": "${field.dataType.describeJson}",
                  |  "${output(2).name}":
                  |  ${field.getComment().map(c => s""""$c"""").getOrElse("null")}
                  |}""".stripMargin
@@ -241,7 +241,7 @@ case class DescribeTableExec(
       val (path, field) = nestedField.get
       s"""{
          |  "name": "${(path :+ field.name).map(quoteIfNeeded).mkString(".")}",
-         |  "data_type": "${field.dataType.simpleString}",
+         |  "data_type": "${field.dataType.describeJson}",
          |  "comment": ${field.getComment().map(c => s""""$c"""").getOrElse("null")}
          |}""".stripMargin
     }.mkString("[", ",", "]")
