@@ -68,7 +68,7 @@ trait SQLQueryTestHelper extends Logging {
       .replaceAll("plan_id=\\d+", "plan_id=x")
       .replaceAll(
         s""""location":.*?$clsName/""",
-        s""""location": $notIncludedMsg/{warehouse_dir}/""")
+        s""""location": "$notIncludedMsg/{warehouse_dir}/""")
       .replaceAll(s"""file:[^\\s,]*$clsName""", s"""file:$notIncludedMsg/{warehouse_dir}""")
       .replaceAll(s""""created_by":".*?"""", s""""created_by $notIncludedMsg":"None"""")
       .replaceAll(s""""created_time":".*?"""", s""""created_time $notIncludedMsg":"None"""")

@@ -174,3 +174,28 @@ TBLPROPERTIES (
 DESC t2;
 
 DESC t2 as json;
+
+CREATE TABLE c (
+  id STRING,
+  nested_struct STRUCT<
+    name: STRING,
+    age: INT,
+    contact: STRUCT<
+      email: STRING,
+      phone_numbers: ARRAY<STRING>,
+      addresses: ARRAY<STRUCT<
+        street: STRING,
+        city: STRING,
+        zip: INT
+      >>
+    >
+  >,
+  preferences MAP<STRING, ARRAY<STRING>>
+) USING parquet
+  OPTIONS (option1 'value1', option2 'value2')
+  PARTITIONED BY (id)
+  COMMENT 'A table with nested complex types'
+  TBLPROPERTIES ('property1' = 'value1', 'password' = 'password');
+
+
+DESC c AS JSON;

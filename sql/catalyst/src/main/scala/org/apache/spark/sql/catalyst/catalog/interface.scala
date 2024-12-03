@@ -60,21 +60,21 @@ import org.apache.spark.util.ArrayImplicits._
  * @param resources resource types and Uris used by the function
  */
 case class CatalogFunction(
-    identifier: FunctionIdentifier,
-    className: String,
-    resources: Seq[FunctionResource])
+                            identifier: FunctionIdentifier,
+                            className: String,
+                            resources: Seq[FunctionResource])
 
 
 /**
  * Storage format, used to describe how a partition or a table is stored.
  */
 case class CatalogStorageFormat(
-    locationUri: Option[URI],
-    inputFormat: Option[String],
-    outputFormat: Option[String],
-    serde: Option[String],
-    compressed: Boolean,
-    properties: Map[String, String]) {
+                                 locationUri: Option[URI],
+                                 inputFormat: Option[String],
+                                 outputFormat: Option[String],
+                                 serde: Option[String],
+                                 compressed: Boolean,
+                                 properties: Map[String, String]) {
 
   override def toString: String = {
     toLinkedHashMap.map { case ((key, value)) =>
@@ -96,6 +96,27 @@ case class CatalogStorageFormat(
     }
     map
   }
+
+  def toJsonCompatibleLinkedHashMap: mutable.LinkedHashMap[String, String] = {
+    val map = new mutable.LinkedHashMap[String, String]()
+
+    locationUri.foreach(l => map.put("Location", s""""$l""""))
+    serde.foreach(s => map.put("Serde Library", s""""$s""""))
+    inputFormat.foreach(format => map.put("InputFormat", s""""$format""""))
+    outputFormat.foreach(format => map.put("OutputFormat", s""""$format""""))
+
+    if (compressed) map.put("Compressed", "true")
+
+    SQLConf.get.redactOptions(properties) match {
+      case props if props.isEmpty => // No-op
+      case props =>
+        val storagePropsJson = props.map { case (k, v) => s""""$k": "$v"""" }
+          .mkString("{", ", ", "}")
+        map.put("Storage Properties", storagePropsJson)
+    }
+
+    map
+  }
 }
 
 object CatalogStorageFormat {
@@ -115,12 +136,12 @@ object CatalogStorageFormat {
  * @param stats optional statistics (number of rows, total size, etc.)
  */
 case class CatalogTablePartition(
-    spec: CatalogTypes.TablePartitionSpec,
-    storage: CatalogStorageFormat,
-    parameters: Map[String, String] = Map.empty,
-    createTime: Long = System.currentTimeMillis,
-    lastAccessTime: Long = -1,
-    stats: Option[CatalogStatistics] = None) {
+                                  spec: CatalogTypes.TablePartitionSpec,
+                                  storage: CatalogStorageFormat,
+                                  parameters: Map[String, String] = Map.empty,
+                                  createTime: Long = System.currentTimeMillis,
+                                  lastAccessTime: Long = -1,
+                                  stats: Option[CatalogStatistics] = None) {
 
   def toLinkedHashMap: mutable.LinkedHashMap[String, String] = {
     val map = new mutable.LinkedHashMap[String, String]()
@@ -137,6 +158,46 @@ case class CatalogTablePartition(
     }
     map.put("Last Access", lastAccess)
     stats.foreach(s => map.put("Partition Statistics", s.simpleString))
+    map
+  }
+
+  def toJsonCompatibleLinkedHashMap: mutable.LinkedHashMap[String, String] = {
+    val map = new mutable.LinkedHashMap[String, String]()
+
+    // Convert the spec to a JSON array of key-value strings
+    val specJson = spec.map { case (k, v) =>
+      val valueStr = v match {
+        case s: String => s""""$s""""
+        case _ => v
+      }
+      s""""${k}": $valueStr"""
+    }.mkString(", ")
+    map.put("Partition Values", s"{$specJson}")
+
+    // Add storage properties as-is if already JSON-compatible, else apply additional quoting
+    storage.toJsonCompatibleLinkedHashMap.map { case (k, v) =>
+      map.put(k, v)
+    }
+
+    // Format partition parameters as a JSON object with key-value pairs
+    if (parameters.nonEmpty) {
+      val paramString = SQLConf.get.redactOptions(parameters)
+        .map { case (k, v) => s""""${k}": $v""" }
+        .mkString(", ")
+      map.put("Partition Parameters", s"{$paramString}")
+    }
+
+    // Format created time and last access as string literals
+    map.put("Created Time", s""""${new Date(createTime).toString}"""")
+
+    val lastAccess = if (lastAccessTime <= 0) "\"UNKNOWN\""
+    else s""""${new Date(lastAccessTime).toString}""""
+
+    map.put("Last Access", lastAccess)
+
+    // Include stats as-is, if compatible with JSON; otherwise, wrap in quotes
+    stats.foreach(s => map.put("Partition Statistics", s""""${s.simpleString}""""))
+
     map
   }
 
@@ -214,9 +275,9 @@ object ClusterBySpec {
    * @return a map entry for the clustering column property.
    */
   def toProperty(
-      schema: StructType,
-      clusterBySpec: ClusterBySpec,
-      resolver: Resolver): (String, String) = {
+                  schema: StructType,
+                  clusterBySpec: ClusterBySpec,
+                  resolver: Resolver): (String, String) = {
     CatalogTable.PROP_CLUSTERING_COLUMNS ->
       normalizeClusterBySpec(schema, clusterBySpec, resolver).toJson
   }
@@ -233,9 +294,9 @@ object ClusterBySpec {
   }
 
   private def normalizeClusterBySpec(
-      schema: StructType,
-      clusterBySpec: ClusterBySpec,
-      resolver: Resolver): ClusterBySpec = {
+                                      schema: StructType,
+                                      clusterBySpec: ClusterBySpec,
+                                      resolver: Resolver): ClusterBySpec = {
     if (schema.isEmpty) {
       return clusterBySpec
     }
@@ -260,9 +321,9 @@ object ClusterBySpec {
   }
 
   def extractClusterByTransform(
-      schema: StructType,
-      clusterBySpec: ClusterBySpec,
-      resolver: Resolver): ClusterByTransform = {
+                                 schema: StructType,
+                                 clusterBySpec: ClusterBySpec,
+                                 resolver: Resolver): ClusterByTransform = {
     val normalizedClusterBySpec = normalizeClusterBySpec(schema, clusterBySpec, resolver)
     ClusterByTransform(normalizedClusterBySpec.columnNames)
   }
@@ -282,9 +343,9 @@ object ClusterBySpec {
  * @param sortColumnNames the names of the columns that used to sort data in each bucket.
  */
 case class BucketSpec(
-    numBuckets: Int,
-    bucketColumnNames: Seq[String],
-    sortColumnNames: Seq[String]) extends SQLConfHelper {
+                       numBuckets: Int,
+                       bucketColumnNames: Seq[String],
+                       sortColumnNames: Seq[String]) extends SQLConfHelper {
 
   if (numBuckets <= 0 || numBuckets > conf.bucketingMaxBuckets) {
     throw QueryCompilationErrors.invalidBucketNumberError(
@@ -306,6 +367,13 @@ case class BucketSpec(
       "Num Buckets" -> numBuckets.toString,
       "Bucket Columns" -> bucketColumnNames.map(quoteIdentifier).mkString("[", ", ", "]"),
       "Sort Columns" -> sortColumnNames.map(quoteIdentifier).mkString("[", ", ", "]")
+    )
+  }
+
+  def toJsonCompatibleLinkedHashMap: mutable.LinkedHashMap[String, String] = {
+    mutable.LinkedHashMap[String, String](
+      "bucket_columns" -> bucketColumnNames.map(s => s""""$s"""").mkString("[", ", ", "]"),
+      "sort_columns" -> sortColumnNames.map(s => s""""$s"""").mkString("[", ", ", "]")
     )
   }
 }
@@ -335,26 +403,26 @@ case class BucketSpec(
  *                      ExternalCatalog.createTable. For temporary views, the value will be empty.
  */
 case class CatalogTable(
-    identifier: TableIdentifier,
-    tableType: CatalogTableType,
-    storage: CatalogStorageFormat,
-    schema: StructType,
-    provider: Option[String] = None,
-    partitionColumnNames: Seq[String] = Seq.empty,
-    bucketSpec: Option[BucketSpec] = None,
-    owner: String = CurrentUserContext.getCurrentUserOrEmpty,
-    createTime: Long = System.currentTimeMillis,
-    lastAccessTime: Long = -1,
-    createVersion: String = "",
-    properties: Map[String, String] = Map.empty,
-    stats: Option[CatalogStatistics] = None,
-    viewText: Option[String] = None,
-    comment: Option[String] = None,
-    unsupportedFeatures: Seq[String] = Seq.empty,
-    tracksPartitionsInCatalog: Boolean = false,
-    schemaPreservesCase: Boolean = true,
-    ignoredProperties: Map[String, String] = Map.empty,
-    viewOriginalText: Option[String] = None) {
+                         identifier: TableIdentifier,
+                         tableType: CatalogTableType,
+                         storage: CatalogStorageFormat,
+                         schema: StructType,
+                         provider: Option[String] = None,
+                         partitionColumnNames: Seq[String] = Seq.empty,
+                         bucketSpec: Option[BucketSpec] = None,
+                         owner: String = CurrentUserContext.getCurrentUserOrEmpty,
+                         createTime: Long = System.currentTimeMillis,
+                         lastAccessTime: Long = -1,
+                         createVersion: String = "",
+                         properties: Map[String, String] = Map.empty,
+                         stats: Option[CatalogStatistics] = None,
+                         viewText: Option[String] = None,
+                         comment: Option[String] = None,
+                         unsupportedFeatures: Seq[String] = Seq.empty,
+                         tracksPartitionsInCatalog: Boolean = false,
+                         schemaPreservesCase: Boolean = true,
+                         ignoredProperties: Map[String, String] = Map.empty,
+                         viewOriginalText: Option[String] = None) {
 
   import CatalogTable._
 
@@ -513,12 +581,12 @@ case class CatalogTable(
 
   /** Syntactic sugar to update a field in `storage`. */
   def withNewStorage(
-      locationUri: Option[URI] = storage.locationUri,
-      inputFormat: Option[String] = storage.inputFormat,
-      outputFormat: Option[String] = storage.outputFormat,
-      compressed: Boolean = false,
-      serde: Option[String] = storage.serde,
-      properties: Map[String, String] = storage.properties): CatalogTable = {
+                      locationUri: Option[URI] = storage.locationUri,
+                      inputFormat: Option[String] = storage.inputFormat,
+                      outputFormat: Option[String] = storage.outputFormat,
+                      compressed: Boolean = false,
+                      serde: Option[String] = storage.serde,
+                      properties: Map[String, String] = storage.properties): CatalogTable = {
     copy(storage = CatalogStorageFormat(
       locationUri, inputFormat, outputFormat, serde, compressed, properties))
   }
@@ -530,7 +598,7 @@ case class CatalogTable(
       SQLConf.get.redactOptions(properties.filter { case (k, _) => !k.startsWith(VIEW_PREFIX) })
         .toSeq.sortBy(_._1)
         .map(p => p._1 + "=" + p._2)
-    val partitionColumns = partitionColumnNames.map(quoteIdentifier).mkString("[", ", ", "]")
+    val partitionColumns = partitionColumnNames.mkString("[", ", ", "]")
     val lastAccess = {
       if (lastAccessTime <= 0) "UNKNOWN" else new Date(lastAccessTime).toString
     }
@@ -573,6 +641,81 @@ case class CatalogTable(
     map
   }
 
+  def toJsonCompatibleLinkedHashMap: mutable.LinkedHashMap[String, String] = {
+    val map = new mutable.LinkedHashMap[String, String]()
+
+    // Convert table properties to a JSON-compatible format
+    val filteredTableProperties = SQLConf.get
+      .redactOptions(properties.filter { case (k, v) =>
+        !k.startsWith(VIEW_PREFIX) && v.nonEmpty
+      })
+
+    val tableProperties: String =
+      if (filteredTableProperties.isEmpty) ""
+      else filteredTableProperties.toSeq
+        .sortBy(_._1)
+        .map { case (k, v) => s""""$k": "$v"""" }
+        .mkString("{", ", ", "}")
+
+    print("\n **** tableProperties: " + tableProperties)
+
+    // Convert partition columns to a JSON array
+    val partitionColumns = partitionColumnNames
+      .map(s => s""""$s"""")
+      .mkString("[", ", ", "]")
+
+    // Handle last access time, converting to a JSON-compatible string
+    val lastAccess =
+      if (lastAccessTime <= 0) "\"UNKNOWN\""
+      else s""""${new Date(lastAccessTime).toInstant.toString}""""
+
+    // Fill the map with key-value pairs, ensuring values are JSON-compatible strings
+    identifier.catalog.foreach(catalog => map.put("Catalog", s""""$catalog""""))
+    identifier.database.foreach(database => map.put("Database", s""""$database""""))
+    map.put("Table", s""""${identifier.table}"""")
+    if (owner != null && owner.nonEmpty) map.put("Owner", s""""$owner"""")
+    map.put("Created Time", s""""${new Date(createTime).toInstant.toString}"""")
+    map.put("Last Access", lastAccess)
+    map.put("Created By", s""""Spark $createVersion"""")
+    map.put("Type", s""""${tableType.name}"""")
+    provider.foreach(provider => map.put("Provider", s""""$provider""""))
+
+    // Add optional fields like bucket spec, comment, and view-related fields
+    bucketSpec.foreach(spec => map ++= spec.toJsonCompatibleLinkedHashMap)
+    comment.foreach(comment => map.put("Comment", s""""$comment""""))
+
+    // Handle view-specific fields if table is a view
+    if (tableType == CatalogTableType.VIEW) {
+      viewText.foreach(text => map.put("View Text", s""""$text""""))
+      viewOriginalText.foreach(originalText =>
+        map.put("View Original Text", s""""$originalText""""))
+      if (SQLConf.get.viewSchemaBindingEnabled) {
+        map.put("View Schema Mode", s""""$viewSchemaMode"""")
+      }
+      if (viewCatalogAndNamespace.nonEmpty) {
+        import org.apache.spark.sql.connector.catalog.CatalogV2Implicits._
+        map.put("View Catalog and Namespace", s""""${viewCatalogAndNamespace.quoted}"""")
+      }
+      if (viewQueryColumnNames.nonEmpty) {
+        val viewQueryColumns =
+          viewQueryColumnNames.map(col => s""""$col"""").mkString("[", ", ", "]")
+        map.put("View Query Output Columns", viewQueryColumns)
+      }
+    }
+
+    // Add table properties, statistics, and storage properties if present
+    if (filteredTableProperties.nonEmpty) map.put("Table Properties", tableProperties)
+    stats.foreach(stat => map.put("Statistics", s""""${stat.simpleString}""""))
+    map ++= storage.toLinkedHashMap
+
+    // Include partition provider, columns, and schema if they are defined
+    if (tracksPartitionsInCatalog) map.put("Partition Provider", "\"Catalog\"")
+    if (partitionColumnNames.nonEmpty) map.put("Partition Columns", partitionColumns)
+    if (schema.nonEmpty) map.put("Schema", s""""${schema.treeString}"""")
+
+    map
+  }
+
   override def toString: String = {
     toLinkedHashMap.map { case ((key, value)) =>
       if (value.isEmpty) key else s"$key: $value"
@@ -601,8 +744,8 @@ object CatalogTable {
   val VIEW_CATALOG_AND_NAMESPACE_PART_PREFIX = VIEW_PREFIX + "catalogAndNamespace.part."
   // Convert the current catalog and namespace to properties.
   def catalogAndNamespaceToProps(
-      currentCatalog: String,
-      currentNamespace: Seq[String]): Map[String, String] = {
+                                  currentCatalog: String,
+                                  currentNamespace: Seq[String]): Map[String, String] = {
     val props = new mutable.HashMap[String, String]
     val parts = currentCatalog +: currentNamespace
     if (parts.nonEmpty) {
@@ -631,10 +774,10 @@ object CatalogTable {
   val PROP_CLUSTERING_COLUMNS: String = "clusteringColumns"
 
   def splitLargeTableProp(
-      key: String,
-      value: String,
-      addProp: (String, String) => Unit,
-      defaultThreshold: Int): Unit = {
+                           key: String,
+                           value: String,
+                           addProp: (String, String) => Unit,
+                           defaultThreshold: Int): Unit = {
     val threshold = SQLConf.get.getConf(SQLConf.HIVE_TABLE_PROPERTY_LENGTH_THRESHOLD)
       .getOrElse(defaultThreshold)
     if (value.length <= threshold) {
@@ -706,9 +849,9 @@ object CatalogTable {
  * concepts of attributes in catalog.
  */
 case class CatalogStatistics(
-    sizeInBytes: BigInt,
-    rowCount: Option[BigInt] = None,
-    colStats: Map[String, CatalogColumnStat] = Map.empty) {
+                              sizeInBytes: BigInt,
+                              rowCount: Option[BigInt] = None,
+                              colStats: Map[String, CatalogColumnStat] = Map.empty) {
 
   /**
    * Convert [[CatalogStatistics]] to [[Statistics]], and match column stats to attributes based
@@ -739,14 +882,14 @@ case class CatalogStatistics(
  * This class of statistics for a column is used in [[CatalogTable]] to interact with metastore.
  */
 case class CatalogColumnStat(
-    distinctCount: Option[BigInt] = None,
-    min: Option[String] = None,
-    max: Option[String] = None,
-    nullCount: Option[BigInt] = None,
-    avgLen: Option[Long] = None,
-    maxLen: Option[Long] = None,
-    histogram: Option[Histogram] = None,
-    version: Int = CatalogColumnStat.VERSION) {
+                              distinctCount: Option[BigInt] = None,
+                              min: Option[String] = None,
+                              max: Option[String] = None,
+                              nullCount: Option[BigInt] = None,
+                              avgLen: Option[Long] = None,
+                              maxLen: Option[Long] = None,
+                              histogram: Option[Histogram] = None,
+                              version: Int = CatalogColumnStat.VERSION) {
 
   /**
    * Returns a map from string to string that can be used to serialize the column stats.
@@ -783,8 +926,8 @@ case class CatalogColumnStat(
 
   /** Convert [[CatalogColumnStat]] to [[ColumnStat]]. */
   def toPlanStat(
-      colName: String,
-      dataType: DataType): ColumnStat =
+                  colName: String,
+                  dataType: DataType): ColumnStat =
     ColumnStat(
       distinctCount = distinctCount,
       min = min.map(CatalogColumnStat.fromExternalString(_, colName, dataType, version)),
@@ -811,10 +954,10 @@ object CatalogColumnStat extends Logging {
   val VERSION = 2
 
   def getTimestampFormatter(
-      isParsing: Boolean,
-      format: String = "yyyy-MM-dd HH:mm:ss.SSSSSS",
-      zoneId: ZoneId = ZoneOffset.UTC,
-      forTimestampNTZ: Boolean = false): TimestampFormatter = {
+                             isParsing: Boolean,
+                             format: String = "yyyy-MM-dd HH:mm:ss.SSSSSS",
+                             zoneId: ZoneId = ZoneOffset.UTC,
+                             forTimestampNTZ: Boolean = false): TimestampFormatter = {
     TimestampFormatter(
       format = format,
       zoneId = zoneId,
@@ -878,9 +1021,9 @@ object CatalogColumnStat extends Logging {
    * The serialization side is defined in [[CatalogColumnStat.toMap]].
    */
   def fromMap(
-    table: String,
-    colName: String,
-    map: Map[String, String]): Option[CatalogColumnStat] = {
+               table: String,
+               colName: String,
+               map: Map[String, String]): Option[CatalogColumnStat] = {
 
     try {
       Some(CatalogColumnStat(
@@ -918,10 +1061,10 @@ object CatalogTableType {
  * A database defined in the catalog.
  */
 case class CatalogDatabase(
-    name: String,
-    description: String,
-    locationUri: URI,
-    properties: Map[String, String])
+  name: String,
+  description: String,
+  locationUri: URI,
+  properties: Map[String, String])
 
 
 object CatalogTypes {
@@ -941,9 +1084,9 @@ object CatalogTypes {
  * `LogicalRelation` or `HiveTableRelation`, during analysis.
  */
 case class UnresolvedCatalogRelation(
-    tableMeta: CatalogTable,
-    options: CaseInsensitiveStringMap = CaseInsensitiveStringMap.empty(),
-    override val isStreaming: Boolean = false) extends UnresolvedLeafNode {
+  tableMeta: CatalogTable,
+  options: CaseInsensitiveStringMap = CaseInsensitiveStringMap.empty(),
+  override val isStreaming: Boolean = false) extends UnresolvedLeafNode {
   assert(tableMeta.identifier.database.isDefined)
 }
 
@@ -953,8 +1096,8 @@ case class UnresolvedCatalogRelation(
  * storing an analyzed plan, `plan` is set to the analyzed plan for the view.
  */
 case class TemporaryViewRelation(
-    tableMeta: CatalogTable,
-    plan: Option[LogicalPlan] = None) extends UnresolvedLeafNode {
+                                  tableMeta: CatalogTable,
+                                  plan: Option[LogicalPlan] = None) extends UnresolvedLeafNode {
   require(plan.isEmpty ||
     (plan.get.resolved && tableMeta.properties.contains(VIEW_STORING_ANALYZED_PLAN)))
 }
@@ -995,8 +1138,8 @@ case class HiveTableRelation(
     tableMeta.stats.map(_.toPlanStats(output, conf.cboEnabled || conf.planStatsEnabled))
       .orElse(tableStats)
       .getOrElse {
-      throw SparkException.internalError("Table stats must be specified.")
-    }
+        throw SparkException.internalError("Table stats must be specified.")
+      }
   }
 
   override def newInstance(): HiveTableRelation = copy(

@@ -543,3 +543,42 @@ DescribeTableCommand `spark_catalog`.`default`.`t2`, false, false, [col_name#x, 
 DESC t2 as json
 -- !query analysis
 DescribeTableCommand `spark_catalog`.`default`.`t2`, false, true, [col_name#x, data_type#x, comment#x]
+
+
+-- !query
+CREATE TABLE c (
+  id STRING,
+  nested_struct STRUCT<
+    name: STRING,
+    age: INT,
+    contact: STRUCT<
+      email: STRING,
+      phone_numbers: ARRAY<STRING>,
+      addresses: ARRAY<STRUCT<
+        street: STRING,
+        city: STRING,
+        zip: INT
+      >>
+    >
+  >,
+  preferences MAP<STRING, ARRAY<STRING>>
+) USING parquet
+  OPTIONS (option1 'value1', option2 'value2')
+  PARTITIONED BY (id)
+  COMMENT 'A table with nested complex types'
+  TBLPROPERTIES ('property1' = 'value1', 'password' = 'password')
+-- !query analysis
+org.apache.spark.sql.catalyst.analysis.TableAlreadyExistsException
+{
+  "errorClass" : "TABLE_OR_VIEW_ALREADY_EXISTS",
+  "sqlState" : "42P07",
+  "messageParameters" : {
+    "relationName" : "`spark_catalog`.`default`.`c`"
+  }
+}
+
+
+-- !query
+DESC c AS JSON
+-- !query analysis
+DescribeTableCommand `spark_catalog`.`default`.`c`, false, true, [col_name#x, data_type#x, comment#x]

@@ -17,6 +17,9 @@
 
 package org.apache.spark.sql.hive.execution.command
 
+ import org.json4s._
+ import org.json4s.jackson.JsonMethods._
+
 import org.apache.spark.sql.{QueryTest, Row}
 import org.apache.spark.sql.connector.catalog.CatalogManager.SESSION_CATALOG_NAME
 import org.apache.spark.sql.connector.catalog.TableCatalog
@@ -30,6 +33,8 @@ import org.apache.spark.util.Utils
  */
 class DescribeTableSuite extends v1.DescribeTableSuiteBase with CommandSuiteBase {
   override def commandVersion: String = super[DescribeTableSuiteBase].commandVersion
+
+  implicit val formats: org.json4s.DefaultFormats.type = org.json4s.DefaultFormats
 
   test("Table Ownership") {
     withNamespaceAndTable("ns", "tbl") { t =>
@@ -84,34 +89,398 @@ class DescribeTableSuite extends v1.DescribeTableSuiteBase with CommandSuiteBase
     }
   }
 
-  test("DESCRIBE TABLE EXTENDED AS JSON of a partitioned table") {
-    withNamespaceAndTable("ns", "table") { tbl =>
-      spark.sql(s"CREATE TABLE $tbl (id bigint, data string) $defaultUsing" +
-        " PARTITIONED BY (id)" +
-        " COMMENT 'this is a test table'" +
-        " LOCATION 'file:/tmp/testcat/table_name'")
-      val descriptionDf = spark.sql(s"DESCRIBE TABLE EXTENDED $tbl AS JSON")
-      assert(descriptionDf.count() == 1)
-      checkKeywordsExist(descriptionDf,
-        "\"columns\":[{\"id\":0,\"name\":\"data\"," +
-          "\"data_type\":\"string\",\"comment\":null}," +
-          "{\"id\":1,\"name\":\"id\",\"data_type\":\"bigint\",\"comment\":null}]",
-        "\"partition_information\":[{\"id\":0,\"name\":\"id\"," +
-          "\"data_type\":\"bigint\",\"comment\":null}],",
-        "\"detailed_table_information\":{\"catalog\":\"",
-        SESSION_CATALOG_NAME,
-        "\"database\":\"ns\",\"table\":\"table\"",
-        TableCatalog.PROP_OWNER,
-        Utils.getCurrentUserName(),
-        "last_access\":\"UNKNOWN\"",
-        "type\":\"EXTERNAL\",\"provider\":\"",
-        getProvider(),
-        "\"comment\":\"this is a test table\",\"table_properties\":",
-        "\"location\":\"file:/tmp/testcat/table_name\"," +
-        "\"serde_library\":\"org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe\"," +
-        "\"inputformat\":\"org.apache.hadoop.mapred.TextInputFormat\",\"outputformat\":" +
-        "\"org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat\",\"storage_properties\":" +
-        "\"[serialization.format=1]\",\"partition_provider\":\"Catalog\"}")
+  test("DESCRIBE AS JSON case class test 1") {
+    withNamespaceAndTable("ns", "table") { t =>
+      val tableCreationStr =
+        s"""
+          |CREATE TABLE $t (a STRING, b INT, c STRING, d STRING) USING parquet
+          |  OPTIONS (a '1', b '2', password 'password')
+          |  PARTITIONED BY (c, d) CLUSTERED BY (a) SORTED BY (b ASC) INTO 2 BUCKETS
+          |  COMMENT 'table_comment'
+          |  TBLPROPERTIES (t 'test', password 'password')
+          |""".stripMargin
+      spark.sql(tableCreationStr)
+      val descriptionDf = spark.sql(s"DESCRIBE $t AS JSON")
+      val firstRow = descriptionDf.select("col_name").head()
+      val jsonValue = firstRow.getString(0)
+      val parsedOutput = parse(jsonValue).extract[DescribeTableOutput]
+
+      val expectedOutput = DescribeTableOutput(
+        table_name = Some("table"),
+        catalog_names = Some(List(SESSION_CATALOG_NAME)),
+        database_names = Some(List("ns")),
+        qualified_name = Some(s"spark_catalog.ns.table"),
+        columns = Some(List(
+          Column(1, "a", Type("string")),
+          Column(2, "b", Type("integer")),
+          Column(3, "c", Type("string")),
+          Column(4, "d", Type("string"))
+        )),
+        owner = Some(""),
+        created_time = Some(""),
+        last_access = Some("UNKNOWN"),
+        created_by = Some("Spark 4.0.0-SNAPSHOT"),
+        `type` = Some("MANAGED"),
+        provider = Some("parquet"),
+        bucket_columns = Some(List("a")),
+        sort_columns = Some(List("b")),
+        comment = Some("table_comment"),
+        table_properties = Some(Map(
+          "password" -> "*********(redacted)",
+          "t" -> "test"
+        )),
+        location = Some(""),
+        serde_library = Some("org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe"),
+        inputformat = Some("org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat"),
+        outputformat = Some("org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat"),
+        storage_properties = Some(Map(
+          "a" -> "1",
+          "b" -> "2",
+          "password" -> "*********(redacted)"
+        )),
+        partition_provider = Some("Catalog"),
+        partition_columns = Some(List("c", "d"))
+      )
+
+      assert(expectedOutput == parsedOutput.copy(owner = Some(""),
+        created_time = Some(""),
+        location = Some("")))
+    }
+  }
+
+  test("DESCRIBE AS JSON case class test 2") {
+    withNamespaceAndTable("ns", "table") { t =>
+      val tableCreationStr =
+        s"""
+          |CREATE TABLE $t (a STRING, b INT, c STRING, d STRING) USING parquet
+          |  OPTIONS (a '1', b '2', password 'password')
+          |  PARTITIONED BY (c, d) CLUSTERED BY (a) SORTED BY (b ASC) INTO 2 BUCKETS
+          |  COMMENT 'table_comment'
+          |  TBLPROPERTIES (t 'test', password 'password')
+          |""".stripMargin
+      spark.sql(tableCreationStr)
+      spark.sql(s"ALTER TABLE $t ADD PARTITION (c='Us', d=1)")
+      val descriptionDf = spark.sql(s"DESCRIBE $t PARTITION (c='Us', d=1) AS JSON")
+      val firstRow = descriptionDf.select("col_name").head()
+      val jsonValue = firstRow.getString(0)
+      val parsedOutput = parse(jsonValue).extract[DescribeTableOutput]
+
+      val expectedOutput = DescribeTableOutput(
+        table_name = Some("table"),
+        catalog_names = Some(List("spark_catalog")),
+        database_names = Some(List("ns")),
+        qualified_name = Some("spark_catalog.ns.table"),
+        columns = Some(List(
+          Column(1, "a", Type("string")),
+          Column(2, "b", Type("integer")),
+          Column(3, "c", Type("string")),
+          Column(4, "d", Type("string"))
+        )),
+        last_access = Some("UNKNOWN"),
+        created_by = Some("Spark 4.0.0-SNAPSHOT"),
+        `type` = Some("MANAGED"),
+        provider = Some("parquet"),
+        bucket_columns = Some(List("a")),
+        sort_columns = Some(List("b")),
+        comment = Some("table_comment"),
+        table_properties = Some(Map(
+          "password" -> "*********(redacted)",
+          "t" -> "test"
+        )),
+        serde_library = Some("org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe"),
+        inputformat = Some("org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat"),
+        outputformat = Some("org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat"),
+        storage_properties = Some(Map(
+          "a" -> "1",
+          "serialization.format" -> "1",
+          "b" -> "2",
+          "password" -> "*********(redacted)"
+        )),
+        partition_provider = Some("Catalog"),
+        partition_columns = Some(List("c", "d")),
+        partition_values = Some(Map("c" -> "Us", "d" -> "1"))
+      )
+
+      assert(expectedOutput ==
+        parsedOutput.copy(location = None, created_time = None, owner = None))
+    }
+  }
+
+  test("DESCRIBE AS JSON case class test 3") {
+    withNamespaceAndTable("ns", "table") { t =>
+      val tableCreationStr =
+        """
+          |CREATE TABLE d (a STRING DEFAULT 'default-value', b INT DEFAULT 42)
+          |USING parquet COMMENT 'table_comment'
+          |""".stripMargin
+      spark.sql(tableCreationStr)
+      val descriptionDf = spark.sql(s"DESC d AS JSON")
+      val firstRow = descriptionDf.select("col_name").head()
+      val jsonValue = firstRow.getString(0)
+      val parsedOutput = parse(jsonValue).extract[DescribeTableOutput]
+
+      val expectedOutput = DescribeTableOutput(
+        table_name = Some("d"),
+        catalog_names = Some(List("spark_catalog")),
+        database_names = Some(List("default")),
+        qualified_name = Some("spark_catalog.default.d"),
+        columns = Some(List(
+          Column(1, "a", Type("string"), default_value = Some("'default-value'")),
+          Column(2, "b", Type("integer"), default_value = Some("42"))
+        )),
+        last_access = Some("UNKNOWN"),
+        created_by = Some("Spark 4.0.0-SNAPSHOT"),
+        `type` = Some("MANAGED"),
+        storage_properties = None,
+        provider = Some("parquet"),
+        bucket_columns = Some(Nil), // No bucket columns in actual JSON
+        sort_columns = Some(Nil), // No sort columns in actual JSON
+        comment = Some("table_comment"),
+        serde_library = Some("org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe"),
+        inputformat = Some("org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat"),
+        outputformat = Some("org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat"),
+        table_properties = None
+      )
+
+      assert(expectedOutput ==
+        parsedOutput.copy(location = None, created_time = None, owner = None))
+    }
+  }
+
+  // TODO: Should temp view have no other fields?
+  test("DESCRIBE AS JSON case class test 4") {
+    withNamespaceAndTable("ns", "table") { t =>
+      val tableCreationStr =
+        """
+          |CREATE TABLE t (a STRING, b INT, c STRING, d STRING) USING parquet
+          |  OPTIONS (a '1', b '2', password 'password')
+          |  PARTITIONED BY (c, d) CLUSTERED BY (a) SORTED BY (b ASC) INTO 2 BUCKETS
+          |  COMMENT 'table_comment'
+          |  TBLPROPERTIES (t 'test', password 'password')
+          |""".stripMargin
+      spark.sql(tableCreationStr)
+      spark.sql("CREATE TEMPORARY VIEW temp_v AS SELECT * FROM t")
+      val descriptionDf = spark.sql(s"DESCRIBE temp_v AS JSON")
+      val firstRow = descriptionDf.select("col_name").head()
+      val jsonValue = firstRow.getString(0)
+      val parsedOutput = parse(jsonValue).extract[DescribeTableOutput]
+
+      val expectedOutput = DescribeTableOutput(
+        columns = Some(List(
+          Column(1, "a", Type("string")),
+          Column(2, "b", Type("integer")),
+          Column(3, "c", Type("string")),
+          Column(4, "d", Type("string"))
+        ))
+      )
+
+      assert(expectedOutput == parsedOutput)
+    }
+  }
+
+  test("DESCRIBE AS JSON case class test 5") {
+    withNamespaceAndTable("ns", "table") { t =>
+      val tableCreationStr =
+        """
+          |CREATE TABLE c (
+          |  id STRING,
+          |  nested_struct STRUCT<
+          |    name: STRING,
+          |    age: INT,
+          |    contact: STRUCT<
+          |      email: STRING,
+          |      phone_numbers: ARRAY<STRING>,
+          |      addresses: ARRAY<STRUCT<
+          |        street: STRING,
+          |        city: STRING,
+          |        zip: INT
+          |      >>
+          |    >
+          |  >,
+          |  preferences MAP<STRING, ARRAY<STRING>>
+          |) USING parquet
+          |  OPTIONS (option1 'value1', option2 'value2')
+          |  PARTITIONED BY (id)
+          |  COMMENT 'A table with nested complex types'
+          |  TBLPROPERTIES ('property1' = 'value1', 'password' = 'password')
+        """.stripMargin
+      spark.sql(tableCreationStr)
+      val descriptionDf = spark.sql(s"DESCRIBE c AS JSON")
+      val firstRow = descriptionDf.select("col_name").head()
+      val jsonValue = firstRow.getString(0)
+      val parsedOutput = parse(jsonValue).extract[DescribeTableOutput]
+
+      val expectedOutput = DescribeTableOutput(
+        table_name = Some("c"),
+        catalog_names = Some(List("spark_catalog")),
+        database_names = Some(List("default")),
+        qualified_name = Some("spark_catalog.default.c"),
+        columns = Some(List(
+          Column(
+            id = 1,
+            name = "nested_struct",
+            `type` = Type(
+              `type` = "struct",
+              fields = Some(List(
+                Field(
+                  name = "name",
+                  `type` = Type("string"),
+                  nullable = Some(true)
+                ),
+                Field(
+                  name = "age",
+                  `type` = Type("integer"),
+                  nullable = Some(true)
+                ),
+                Field(
+                  name = "contact",
+                  `type` = Type(
+                    `type` = "struct",
+                    fields = Some(List(
+                      Field(
+                        name = "email",
+                        `type` = Type("string"),
+                        nullable = Some(true)
+                      ),
+                      Field(
+                        name = "phone_numbers",
+                        `type` = Type(
+                          `type` = "array",
+                          elementType = Some(Type("string")),
+                          containsNull = Some(true)
+                        ),
+                        nullable = Some(true)
+                      ),
+                      Field(
+                        name = "addresses",
+                        `type` = Type(
+                          `type` = "array",
+                          elementType = Some(Type(
+                            `type` = "struct",
+                            fields = Some(List(
+                              Field(
+                                name = "street",
+                                `type` = Type("string"),
+                                nullable = Some(true)
+                              ),
+                              Field(
+                                name = "city",
+                                `type` = Type("string"),
+                                nullable = Some(true)
+                              ),
+                              Field(
+                                name = "zip",
+                                `type` = Type("integer"),
+                                nullable = Some(true)
+                              )
+                            ))
+                          )),
+                          containsNull = Some(true)
+                        ),
+                        nullable = Some(true)
+                      )
+                    ))
+                  ),
+                  nullable = Some(true)
+                )
+              ))
+            ),
+            default_value = None
+          ),
+          Column(
+            id = 2,
+            name = "preferences",
+            `type` = Type(
+              `type` = "map",
+              keyType = Some(Type("string")),
+              valueType = Some(Type(
+                `type` = "array",
+                elementType = Some(Type("string")),
+                containsNull = Some(true)
+              )),
+              valueContainsNull = Some(true)
+            ),
+            default_value = None
+          ),
+          Column(
+            id = 3,
+            name = "id",
+            `type` = Type("string"),
+            default_value = None
+          )
+        )),
+        serde_library = Some("org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe"),
+        inputformat = Some("org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat"),
+        outputformat = Some("org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat"),
+        storage_properties = Some(Map(
+          "option1" -> "value1",
+          "option2" -> "value2"
+        )),
+        last_access = Some("UNKNOWN"),
+        created_by = Some("Spark 4.0.0-SNAPSHOT"),
+        `type` = Some("MANAGED"),
+        provider = Some("parquet"),
+        comment = Some("A table with nested complex types"),
+        table_properties = Some(Map(
+          "password" -> "*********(redacted)",
+          "property1" -> "value1"
+        )),
+        partition_provider = Some("Catalog"),
+        partition_columns = Some(List("id"))
+      )
+
+      assert(expectedOutput ==
+        parsedOutput.copy(location = None, created_time = None, owner = None))
     }
   }
 }
+
+case class DescribeTableOutput(
+  table_name: Option[String] = None,
+  catalog_names: Option[List[String]] = Some(Nil),
+  database_names: Option[List[String]] = Some(Nil),
+  qualified_name: Option[String] = None,
+  columns: Option[List[Column]] = Some(Nil),
+  owner: Option[String] = None,
+  created_time: Option[String] = None,
+  last_access: Option[String] = None,
+  created_by: Option[String] = None,
+  `type`: Option[String] = None,
+  provider: Option[String] = None,
+  bucket_columns: Option[List[String]] = Some(Nil),
+  sort_columns: Option[List[String]] = Some(Nil),
+  comment: Option[String] = None,
+  table_properties: Option[Map[String, String]] = None,
+  location: Option[String] = None,
+  serde_library: Option[String] = None,
+  inputformat: Option[String] = None,
+  outputformat: Option[String] = None,
+  storage_properties: Option[Map[String, String]] = None,
+  partition_provider: Option[String] = None,
+  partition_columns: Option[List[String]] = Some(Nil),
+  partition_values: Option[Map[String, String]] = None
+)
+
+case class Column(
+ id: Int,
+ name: String,
+ `type`: Type,
+ default_value: Option[String] = None
+)
+
+case class Type(
+   `type`: String,
+   fields: Option[List[Field]] = None,
+   elementType: Option[Type] = None,
+   keyType: Option[Type] = None,
+   valueType: Option[Type] = None,
+   nullable: Option[Boolean] = None,
+   containsNull: Option[Boolean] = None,
+   valueContainsNull: Option[Boolean] = None
+  )
+
+case class Field(
+  name: String,
+  `type`: Type,
+  nullable: Option[Boolean] = None
+)

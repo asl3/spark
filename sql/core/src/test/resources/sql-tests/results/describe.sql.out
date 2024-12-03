@@ -76,7 +76,7 @@ DESCRIBE t AS JSON
 -- !query schema
 struct<col_name:string,data_type:string,comment:string>
 -- !query output
-{"columns":[{"id":0,"name":"a","data_type":"string","comment":null},{"id":1,"name":"b","data_type":"int","comment":null},{"id":2,"name":"c","data_type":"string","comment":null},{"id":3,"name":"d","data_type":"string","comment":null}],"partition_information":[{"id":0,"name":"c","data_type":"string","comment":null},{"id":1,"name":"d","data_type":"string","comment":null}]}
+{"table_name":"t","catalog_name":["spark_catalog"],"database_name":["default"],"qualified_name":"spark_catalog.default.t","columns":[{"id":1,"name":"a","type":{"type":"string"}},{"id":2,"name":"b","type":{"type":"integer"}},{"id":3,"name":"c","type":{"type":"string"}},{"id":4,"name":"d","type":{"type":"string"}}],"created_time [not included in comparison]":"None","last_access [not included in comparison]":"None","created_by [not included in comparison]":"None","type":"MANAGED","provider":"parquet","num_buckets":2,"bucket_columns":["a"],"sort_columns":["b"],"comment":"table_comment","table_properties":{"e":"3","password":"*********(redacted)","t":"test"},"location": "[not included in comparison]/{warehouse_dir}/t","storage_properties":"[a=1, b=2, password=*********(redacted)]","partition_provider":"Catalog","partition_columns":["c","d"],"location": "[not included in comparison]/{warehouse_dir}/t","storage_properties":{"a":"1","b":"2","password":"*********(redacted)"}}
 
 
 -- !query
@@ -147,7 +147,7 @@ DESC FORMATTED t AS JSON
 -- !query schema
 struct<col_name:string,data_type:string,comment:string>
 -- !query output
-{"columns":[{"id":0,"name":"a","data_type":"string","comment":null},{"id":1,"name":"b","data_type":"int","comment":null},{"id":2,"name":"c","data_type":"string","comment":null},{"id":3,"name":"d","data_type":"string","comment":null}],"partition_information":[{"id":0,"name":"c","data_type":"string","comment":null},{"id":1,"name":"d","data_type":"string","comment":null}],"detailed_table_information":{"catalog":"spark_catalog","database":"default","table":"t","created_time [not included in comparison]":"None","last_access [not included in comparison]":"None","created_by [not included in comparison]":"None","type":"MANAGED","provider":"parquet","num_buckets":"2","bucket_columns":"[`a`]","sort_columns":"[`b`]","comment":"table_comment","table_properties":"[e=3,password=*********(redacted),t=test]","location": [not included in comparison]/{warehouse_dir}/t","storage_properties":"[a=1,b=2,password=*********(redacted)]","partition_provider":"Catalog"}}
+{"table_name":"t","catalog_name":["spark_catalog"],"database_name":["default"],"qualified_name":"spark_catalog.default.t","columns":[{"id":1,"name":"a","type":{"type":"string"}},{"id":2,"name":"b","type":{"type":"integer"}},{"id":3,"name":"c","type":{"type":"string"}},{"id":4,"name":"d","type":{"type":"string"}}],"created_time [not included in comparison]":"None","last_access [not included in comparison]":"None","created_by [not included in comparison]":"None","type":"MANAGED","provider":"parquet","num_buckets":2,"bucket_columns":["a"],"sort_columns":["b"],"comment":"table_comment","table_properties":{"e":"3","password":"*********(redacted)","t":"test"},"location": "[not included in comparison]/{warehouse_dir}/t","storage_properties":"[a=1, b=2, password=*********(redacted)]","partition_provider":"Catalog","partition_columns":["c","d"],"location": "[not included in comparison]/{warehouse_dir}/t","storage_properties":{"a":"1","b":"2","password":"*********(redacted)"}}
 
 
 -- !query
@@ -188,7 +188,7 @@ DESC EXTENDED t AS JSON
 -- !query schema
 struct<col_name:string,data_type:string,comment:string>
 -- !query output
-{"columns":[{"id":0,"name":"a","data_type":"string","comment":null},{"id":1,"name":"b","data_type":"int","comment":null},{"id":2,"name":"c","data_type":"string","comment":null},{"id":3,"name":"d","data_type":"string","comment":null}],"partition_information":[{"id":0,"name":"c","data_type":"string","comment":null},{"id":1,"name":"d","data_type":"string","comment":null}],"detailed_table_information":{"catalog":"spark_catalog","database":"default","table":"t","created_time [not included in comparison]":"None","last_access [not included in comparison]":"None","created_by [not included in comparison]":"None","type":"MANAGED","provider":"parquet","num_buckets":"2","bucket_columns":"[`a`]","sort_columns":"[`b`]","comment":"table_comment","table_properties":"[e=3,password=*********(redacted),t=test]","location": [not included in comparison]/{warehouse_dir}/t","storage_properties":"[a=1,b=2,password=*********(redacted)]","partition_provider":"Catalog"}}
+{"table_name":"t","catalog_name":["spark_catalog"],"database_name":["default"],"qualified_name":"spark_catalog.default.t","columns":[{"id":1,"name":"a","type":{"type":"string"}},{"id":2,"name":"b","type":{"type":"integer"}},{"id":3,"name":"c","type":{"type":"string"}},{"id":4,"name":"d","type":{"type":"string"}}],"created_time [not included in comparison]":"None","last_access [not included in comparison]":"None","created_by [not included in comparison]":"None","type":"MANAGED","provider":"parquet","num_buckets":2,"bucket_columns":["a"],"sort_columns":["b"],"comment":"table_comment","table_properties":{"e":"3","password":"*********(redacted)","t":"test"},"location": "[not included in comparison]/{warehouse_dir}/t","storage_properties":"[a=1, b=2, password=*********(redacted)]","partition_provider":"Catalog","partition_columns":["c","d"],"location": "[not included in comparison]/{warehouse_dir}/t","storage_properties":{"a":"1","b":"2","password":"*********(redacted)"}}
 
 
 -- !query
@@ -292,7 +292,7 @@ DESC t PARTITION (c='Us', d=1) AS JSON
 -- !query schema
 struct<col_name:string,data_type:string,comment:string>
 -- !query output
-{"columns":[{"id":0,"name":"a","data_type":"string","comment":null},{"id":1,"name":"b","data_type":"int","comment":null},{"id":2,"name":"c","data_type":"string","comment":null},{"id":3,"name":"d","data_type":"string","comment":null}],"partition_information":[{"id":0,"name":"c","data_type":"string","comment":null},{"id":1,"name":"d","data_type":"string","comment":null}]}
+{"table_name":"t","catalog_name":["spark_catalog"],"database_name":["default"],"qualified_name":"spark_catalog.default.t","columns":[{"id":1,"name":"a","type":{"type":"string"}},{"id":2,"name":"b","type":{"type":"integer"}},{"id":3,"name":"c","type":{"type":"string"}},{"id":4,"name":"d","type":{"type":"string"}}],"partition_values":{"c":"Us","d":"1"},"location": "[not included in comparison]/{warehouse_dir}/t/c=Us/d=1","storage_properties":{"a":"1","b":"2","password":"*********(redacted)"},"created_time [not included in comparison]":"None","last_access [not included in comparison]":"None","created_time [not included in comparison]":"None","last_access [not included in comparison]":"None","created_by [not included in comparison]":"None","type":"MANAGED","provider":"parquet","num_buckets":2,"bucket_columns":["a"],"sort_columns":["b"],"table_properties":{"password":"*********(redacted)","t":"test"},"location": "[not included in comparison]/{warehouse_dir}/t","storage_properties":"[a=1, b=2, password=*********(redacted)]","partition_provider":"Catalog","partition_columns":["c","d"],"location": "[not included in comparison]/{warehouse_dir}/t","storage_properties":{"a":"1","b":"2","password":"*********(redacted)"}}
 
 
 -- !query
@@ -393,7 +393,7 @@ DESC EXTENDED t PARTITION (C='Us', D=1) AS JSON
 -- !query schema
 struct<col_name:string,data_type:string,comment:string>
 -- !query output
-{"columns":[{"id":0,"name":"a","data_type":"string","comment":null},{"id":1,"name":"b","data_type":"int","comment":null},{"id":2,"name":"c","data_type":"string","comment":null},{"id":3,"name":"d","data_type":"string","comment":null}],"partition_information":[{"id":0,"name":"c","data_type":"string","comment":null},{"id":1,"name":"d","data_type":"string","comment":null}],"detailed_partition_information":{"partition_info":{"database":"default","table":"t"},"storage_info":{"num_buckets":"2","bucket_columns":"[`a`]","sort_columns":"[`b`]"},"partition_data":{"partition_values":"[c=Us,d=1]","location": [not included in comparison]/{warehouse_dir}/t/c=Us/d=1","storage_properties":"[a=1,b=2,password=*********(redacted)]","created_time [not included in comparison]":"None","last_access [not included in comparison]":"None"}}}
+{"table_name":"t","catalog_name":["spark_catalog"],"database_name":["default"],"qualified_name":"spark_catalog.default.t","columns":[{"id":1,"name":"a","type":{"type":"string"}},{"id":2,"name":"b","type":{"type":"integer"}},{"id":3,"name":"c","type":{"type":"string"}},{"id":4,"name":"d","type":{"type":"string"}}],"partition_values":{"c":"Us","d":"1"},"location": "[not included in comparison]/{warehouse_dir}/t/c=Us/d=1","storage_properties":{"a":"1","b":"2","password":"*********(redacted)"},"created_time [not included in comparison]":"None","last_access [not included in comparison]":"None","created_time [not included in comparison]":"None","last_access [not included in comparison]":"None","created_by [not included in comparison]":"None","type":"MANAGED","provider":"parquet","num_buckets":2,"bucket_columns":["a"],"sort_columns":["b"],"table_properties":{"password":"*********(redacted)","t":"test"},"location": "[not included in comparison]/{warehouse_dir}/t","storage_properties":"[a=1, b=2, password=*********(redacted)]","partition_provider":"Catalog","partition_columns":["c","d"],"location": "[not included in comparison]/{warehouse_dir}/t","storage_properties":{"a":"1","b":"2","password":"*********(redacted)"}}
 
 
 -- !query
@@ -482,7 +482,7 @@ DESC temp_v AS JSON
 -- !query schema
 struct<col_name:string,data_type:string,comment:string>
 -- !query output
-{"columns":[{"id":0,"name":"a","data_type":"string","comment":null},{"id":1,"name":"b","data_type":"int","comment":null},{"id":2,"name":"c","data_type":"string","comment":null},{"id":3,"name":"d","data_type":"string","comment":null}]}
+{"table_name":"temp_v","columns":[{"id":1,"name":"a","type":{"type":"string"}},{"id":2,"name":"b","type":{"type":"integer"}},{"id":3,"name":"c","type":{"type":"string"}},{"id":4,"name":"d","type":{"type":"string"}}]}
 
 
 -- !query
@@ -501,7 +501,7 @@ DESC TABLE temp_v AS JSON
 -- !query schema
 struct<col_name:string,data_type:string,comment:string>
 -- !query output
-{"columns":[{"id":0,"name":"a","data_type":"string","comment":null},{"id":1,"name":"b","data_type":"int","comment":null},{"id":2,"name":"c","data_type":"string","comment":null},{"id":3,"name":"d","data_type":"string","comment":null}]}
+{"table_name":"temp_v","columns":[{"id":1,"name":"a","type":{"type":"string"}},{"id":2,"name":"b","type":{"type":"integer"}},{"id":3,"name":"c","type":{"type":"string"}},{"id":4,"name":"d","type":{"type":"string"}}]}
 
 
 -- !query
@@ -618,7 +618,7 @@ DESC FORMATTED v AS JSON
 -- !query schema
 struct<col_name:string,data_type:string,comment:string>
 -- !query output
-{"columns":[{"id":0,"name":"a","data_type":"string","comment":null},{"id":1,"name":"b","data_type":"int","comment":null},{"id":2,"name":"c","data_type":"string","comment":null},{"id":3,"name":"d","data_type":"string","comment":null}],"detailed_table_information":{"catalog":"spark_catalog","database":"default","table":"v","created_time [not included in comparison]":"None","last_access [not included in comparison]":"None","created_by [not included in comparison]":"None","type":"VIEW","view_text":"SELECT*FROMt","view_original_text":"SELECT*FROMt","view_schema_mode":"COMPENSATION","view_catalog_and_namespace":"spark_catalog.default","view_query_output_columns":"[a,b,c,d]"}}
+{"table_name":"v","catalog_name":["spark_catalog"],"database_name":["default"],"qualified_name":"spark_catalog.default.v","columns":[{"id":1,"name":"a","type":{"type":"string"}},{"id":2,"name":"b","type":{"type":"integer"}},{"id":3,"name":"c","type":{"type":"string"}},{"id":4,"name":"d","type":{"type":"string"}}],"created_time [not included in comparison]":"None","last_access [not included in comparison]":"None","created_by [not included in comparison]":"None","type":"VIEW","view_text":"SELECT * FROM t","view_original_text":"SELECT * FROM t","view_schema_mode":"COMPENSATION","view_catalog_and_namespace":"spark_catalog.default","view_query_output_columns":["a","b","c","d"],"table_properties":{}}
 
 
 -- !query
@@ -819,7 +819,7 @@ DESC d AS JSON
 -- !query schema
 struct<col_name:string,data_type:string,comment:string>
 -- !query output
-{"columns":[{"id":0,"name":"a","data_type":"string","comment":null},{"id":1,"name":"b","data_type":"int","comment":null}],"default_values":[{"id":2,"name":"a","data_type":"string","comment":"'default-value'"},{"id":3,"name":"b","data_type":"int","comment":"42"}]}
+{"table_name":"d","catalog_name":["spark_catalog"],"database_name":["default"],"qualified_name":"spark_catalog.default.d","columns":[{"id":1,"name":"a","type":{"type":"string"},"default_value":"'default-value'"},{"id":2,"name":"b","type":{"type":"integer"},"default_value":"42"}],"created_time [not included in comparison]":"None","last_access [not included in comparison]":"None","created_by [not included in comparison]":"None","type":"MANAGED","provider":"parquet","comment":"table_comment","table_properties":{},"location": "[not included in comparison]/{warehouse_dir}/d","location": "[not included in comparison]/{warehouse_dir}/d"}
 
 
 -- !query
@@ -877,7 +877,7 @@ DESC TABLE EXTENDED d AS JSON
 -- !query schema
 struct<col_name:string,data_type:string,comment:string>
 -- !query output
-{"columns":[{"id":0,"name":"a","data_type":"string","comment":null},{"id":1,"name":"b","data_type":"int","comment":null}],"detailed_table_information":{"catalog":"spark_catalog","database":"default","table":"d","created_time [not included in comparison]":"None","last_access [not included in comparison]":"None","created_by [not included in comparison]":"None","type":"MANAGED","provider":"parquet","comment":"table_comment","location": [not included in comparison]/{warehouse_dir}/d"},"default_values":[{"id":2,"name":"a","data_type":"string","comment":"'default-value'"},{"id":3,"name":"b","data_type":"int","comment":"42"}]}
+{"table_name":"d","catalog_name":["spark_catalog"],"database_name":["default"],"qualified_name":"spark_catalog.default.d","columns":[{"id":1,"name":"a","type":{"type":"string"},"default_value":"'default-value'"},{"id":2,"name":"b","type":{"type":"integer"},"default_value":"42"}],"created_time [not included in comparison]":"None","last_access [not included in comparison]":"None","created_by [not included in comparison]":"None","type":"MANAGED","provider":"parquet","comment":"table_comment","table_properties":{},"location": "[not included in comparison]/{warehouse_dir}/d","location": "[not included in comparison]/{warehouse_dir}/d"}
 
 
 -- !query
@@ -931,7 +931,7 @@ DESC e AS JSON
 -- !query schema
 struct<col_name:string,data_type:string,comment:string>
 -- !query output
-{"columns":[{"id":0,"name":"a","data_type":"string","comment":null},{"id":1,"name":"b","data_type":"int","comment":null}],"default_values":[{"id":2,"name":"a","data_type":"string","comment":"CONCAT('a\nb\n','c\nd')"},{"id":3,"name":"b","data_type":"int","comment":"42"}]}
+{"table_name":"e","catalog_name":["spark_catalog"],"database_name":["default"],"qualified_name":"spark_catalog.default.e","columns":[{"id":1,"name":"a","type":{"type":"string"},"default_value":"CONCAT('a\n b\n ', 'c\n d')"},{"id":2,"name":"b","type":{"type":"integer"},"default_value":"42"}],"created_time [not included in comparison]":"None","last_access [not included in comparison]":"None","created_by [not included in comparison]":"None","type":"MANAGED","provider":"parquet","comment":"table_comment","table_properties":{},"location": "[not included in comparison]/{warehouse_dir}/e","location": "[not included in comparison]/{warehouse_dir}/e"}
 
 
 -- !query
@@ -1014,7 +1014,7 @@ DESC TABLE FORMATTED e AS JSON
 -- !query schema
 struct<col_name:string,data_type:string,comment:string>
 -- !query output
-{"columns":[{"id":0,"name":"a","data_type":"string","comment":null},{"id":1,"name":"b","data_type":"int","comment":null}],"detailed_table_information":{"catalog":"spark_catalog","database":"default","table":"e","created_time [not included in comparison]":"None","last_access [not included in comparison]":"None","created_by [not included in comparison]":"None","type":"MANAGED","provider":"parquet","comment":"table_comment","location": [not included in comparison]/{warehouse_dir}/e"},"default_values":[{"id":2,"name":"a","data_type":"string","comment":"CONCAT('a\nb\n','c\nd')"},{"id":3,"name":"b","data_type":"int","comment":"42"}]}
+{"table_name":"e","catalog_name":["spark_catalog"],"database_name":["default"],"qualified_name":"spark_catalog.default.e","columns":[{"id":1,"name":"a","type":{"type":"string"},"default_value":"CONCAT('a\n b\n ', 'c\n d')"},{"id":2,"name":"b","type":{"type":"integer"},"default_value":"42"}],"created_time [not included in comparison]":"None","last_access [not included in comparison]":"None","created_by [not included in comparison]":"None","type":"MANAGED","provider":"parquet","comment":"table_comment","table_properties":{},"location": "[not included in comparison]/{warehouse_dir}/e","location": "[not included in comparison]/{warehouse_dir}/e"}
 
 
 -- !query
@@ -1063,4 +1063,40 @@ DESC t2 as json
 -- !query schema
 struct<col_name:string,data_type:string,comment:string>
 -- !query output
-{"columns":[{"id":0,"name":"a","data_type":"string","comment":null},{"id":1,"name":"b","data_type":"int","comment":null},{"id":2,"name":"c","data_type":"string","comment":null},{"id":3,"name":"d","data_type":"string","comment":null}],"partition_information":[{"id":0,"name":"c","data_type":"string","comment":null},{"id":1,"name":"d","data_type":"string","comment":null}]}
+{"table_name":"t2","catalog_name":["spark_catalog"],"database_name":["default"],"qualified_name":"spark_catalog.default.t2","columns":[{"id":1,"name":"a","type":{"type":"string"}},{"id":2,"name":"b","type":{"type":"integer"}},{"id":3,"name":"c","type":{"type":"string"}},{"id":4,"name":"d","type":{"type":"string"}}],"created_time":"2024-11-22T00:43:12.347Z","last_access":"UNKNOWN","created_by":"Spark 4.0.0-SNAPSHOT","type":"MANAGED","provider":"parquet","num_buckets":2,"bucket_columns":["a"],"sort_columns":["b"],"comment":"table_comment","table_properties":{"password":"*********(redacted)","t":"test"},"location":"file:[not included in comparison]/{warehouse_dir}/t2","storage_properties":"[a=1, b=2, password=*********(redacted)]","partition_provider":"Catalog","partition_columns":["c","d"],"location":"file:[not included in comparison]/{warehouse_dir}/t2","storage_properties":{"a":"1","b":"2","password":"*********(redacted)"}}
+
+
+-- !query
+CREATE TABLE c (
+  id STRING,
+  nested_struct STRUCT<
+    name: STRING,
+    age: INT,
+    contact: STRUCT<
+      email: STRING,
+      phone_numbers: ARRAY<STRING>,
+      addresses: ARRAY<STRUCT<
+        street: STRING,
+        city: STRING,
+        zip: INT
+      >>
+    >
+  >,
+  preferences MAP<STRING, ARRAY<STRING>>
+) USING parquet
+  OPTIONS (option1 'value1', option2 'value2')
+  PARTITIONED BY (id)
+  COMMENT 'A table with nested complex types'
+  TBLPROPERTIES ('property1' = 'value1', 'password' = 'password')
+-- !query schema
+struct<>
+-- !query output
+
+
+
+-- !query
+DESC c AS JSON
+-- !query schema
+struct<col_name:string,data_type:string,comment:string>
+-- !query output
+{"table_name":"c","catalog_name":["spark_catalog"],"database_name":["default"],"qualified_name":"spark_catalog.default.c","columns":[{"id":1,"name":"nested_struct","type":{"type":"struct","fields":[{"name":"name","type":{"type":"string"},"nullable":true},{"name":"age","type":{"type":"integer"},"nullable":true},{"name":"contact","type":{"type":"struct","fields":[{"name":"email","type":{"type":"string"},"nullable":true},{"name":"phone_numbers","type":{"type":"array","elementtype":{"type":"string"},"containsnull":true},"nullable":true},{"name":"addresses","type":{"type":"array","elementtype":{"type":"struct","fields":[{"name":"street","type":{"type":"string"},"nullable":true},{"name":"city","type":{"type":"string"},"nullable":true},{"name":"zip","type":{"type":"integer"},"nullable":true}]},"containsnull":true},"nullable":true}]},"nullable":true}]}},{"id":2,"name":"preferences","type":{"type":"map","keytype":{"type":"string"},"valuetype":{"type":"array","elementtype":{"type":"string"},"containsnull":true},"valuecontainsnull":true}},{"id":3,"name":"id","type":{"type":"string"}}],"created_time [not included in comparison]":"None","last_access [not included in comparison]":"None","created_by [not included in comparison]":"None","type":"MANAGED","provider":"parquet","comment":"A table with nested complex types","table_properties":{"password":"*********(redacted)","property1":"value1"},"location": "[not included in comparison]/{warehouse_dir}/c","storage_properties":"[option1=value1, option2=value2]","partition_provider":"Catalog","partition_columns":["id"],"location": "[not included in comparison]/{warehouse_dir}/c","storage_properties":{"option1":"value1","option2":"value2"}}
