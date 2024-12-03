@@ -89,7 +89,7 @@ class DescribeTableSuite extends v1.DescribeTableSuiteBase with CommandSuiteBase
     }
   }
 
-  test("DESCRIBE AS JSON case class test 1") {
+  test("DESCRIBE AS JSON partitions, clusters, buckets") {
     withNamespaceAndTable("ns", "table") { t =>
       val tableCreationStr =
         s"""
@@ -148,7 +148,7 @@ class DescribeTableSuite extends v1.DescribeTableSuiteBase with CommandSuiteBase
     }
   }
 
-  test("DESCRIBE AS JSON case class test 2") {
+  test("DESCRIBE AS JSON partition spec") {
     withNamespaceAndTable("ns", "table") { t =>
       val tableCreationStr =
         s"""
@@ -206,7 +206,7 @@ class DescribeTableSuite extends v1.DescribeTableSuiteBase with CommandSuiteBase
     }
   }
 
-  test("DESCRIBE AS JSON case class test 3") {
+  test("DESCRIBE AS JSON default values") {
     withNamespaceAndTable("ns", "table") { t =>
       val tableCreationStr =
         """
@@ -248,7 +248,7 @@ class DescribeTableSuite extends v1.DescribeTableSuiteBase with CommandSuiteBase
   }
 
   // TODO: Should temp view have no other fields?
-  test("DESCRIBE AS JSON case class test 4") {
+  test("DESCRIBE AS JSON temp view") {
     withNamespaceAndTable("ns", "table") { t =>
       val tableCreationStr =
         """
@@ -278,7 +278,7 @@ class DescribeTableSuite extends v1.DescribeTableSuiteBase with CommandSuiteBase
     }
   }
 
-  test("DESCRIBE AS JSON case class test 5") {
+  test("DESCRIBE AS JSON complex types") {
     withNamespaceAndTable("ns", "table") { t =>
       val tableCreationStr =
         """
