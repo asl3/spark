@@ -60,21 +60,21 @@ import org.apache.spark.util.ArrayImplicits._
  * @param resources resource types and Uris used by the function
  */
 case class CatalogFunction(
-                            identifier: FunctionIdentifier,
-                            className: String,
-                            resources: Seq[FunctionResource])
+    identifier: FunctionIdentifier,
+    className: String,
+    resources: Seq[FunctionResource])
 
 
 /**
  * Storage format, used to describe how a partition or a table is stored.
  */
 case class CatalogStorageFormat(
-                                 locationUri: Option[URI],
-                                 inputFormat: Option[String],
-                                 outputFormat: Option[String],
-                                 serde: Option[String],
-                                 compressed: Boolean,
-                                 properties: Map[String, String]) {
+   locationUri: Option[URI],
+   inputFormat: Option[String],
+   outputFormat: Option[String],
+   serde: Option[String],
+   compressed: Boolean,
+   properties: Map[String, String]) {
 
   override def toString: String = {
     toLinkedHashMap.map { case ((key, value)) =>
@@ -136,12 +136,12 @@ object CatalogStorageFormat {
  * @param stats optional statistics (number of rows, total size, etc.)
  */
 case class CatalogTablePartition(
-                                  spec: CatalogTypes.TablePartitionSpec,
-                                  storage: CatalogStorageFormat,
-                                  parameters: Map[String, String] = Map.empty,
-                                  createTime: Long = System.currentTimeMillis,
-                                  lastAccessTime: Long = -1,
-                                  stats: Option[CatalogStatistics] = None) {
+    spec: CatalogTypes.TablePartitionSpec,
+    storage: CatalogStorageFormat,
+    parameters: Map[String, String] = Map.empty,
+    createTime: Long = System.currentTimeMillis,
+    lastAccessTime: Long = -1,
+    stats: Option[CatalogStatistics] = None) {
 
   def toLinkedHashMap: mutable.LinkedHashMap[String, String] = {
     val map = new mutable.LinkedHashMap[String, String]()
@@ -275,9 +275,9 @@ object ClusterBySpec {
    * @return a map entry for the clustering column property.
    */
   def toProperty(
-                  schema: StructType,
-                  clusterBySpec: ClusterBySpec,
-                  resolver: Resolver): (String, String) = {
+      schema: StructType,
+      clusterBySpec: ClusterBySpec,
+      resolver: Resolver): (String, String) = {
     CatalogTable.PROP_CLUSTERING_COLUMNS ->
       normalizeClusterBySpec(schema, clusterBySpec, resolver).toJson
   }
@@ -294,9 +294,9 @@ object ClusterBySpec {
   }
 
   private def normalizeClusterBySpec(
-                                      schema: StructType,
-                                      clusterBySpec: ClusterBySpec,
-                                      resolver: Resolver): ClusterBySpec = {
+      schema: StructType,
+      clusterBySpec: ClusterBySpec,
+      resolver: Resolver): ClusterBySpec = {
     if (schema.isEmpty) {
       return clusterBySpec
     }
@@ -321,9 +321,9 @@ object ClusterBySpec {
   }
 
   def extractClusterByTransform(
-                                 schema: StructType,
-                                 clusterBySpec: ClusterBySpec,
-                                 resolver: Resolver): ClusterByTransform = {
+       schema: StructType,
+       clusterBySpec: ClusterBySpec,
+       resolver: Resolver): ClusterByTransform = {
     val normalizedClusterBySpec = normalizeClusterBySpec(schema, clusterBySpec, resolver)
     ClusterByTransform(normalizedClusterBySpec.columnNames)
   }
@@ -343,9 +343,9 @@ object ClusterBySpec {
  * @param sortColumnNames the names of the columns that used to sort data in each bucket.
  */
 case class BucketSpec(
-                       numBuckets: Int,
-                       bucketColumnNames: Seq[String],
-                       sortColumnNames: Seq[String]) extends SQLConfHelper {
+     numBuckets: Int,
+     bucketColumnNames: Seq[String],
+     sortColumnNames: Seq[String]) extends SQLConfHelper {
 
   if (numBuckets <= 0 || numBuckets > conf.bucketingMaxBuckets) {
     throw QueryCompilationErrors.invalidBucketNumberError(
@@ -403,26 +403,26 @@ case class BucketSpec(
  *                      ExternalCatalog.createTable. For temporary views, the value will be empty.
  */
 case class CatalogTable(
-                         identifier: TableIdentifier,
-                         tableType: CatalogTableType,
-                         storage: CatalogStorageFormat,
-                         schema: StructType,
-                         provider: Option[String] = None,
-                         partitionColumnNames: Seq[String] = Seq.empty,
-                         bucketSpec: Option[BucketSpec] = None,
-                         owner: String = CurrentUserContext.getCurrentUserOrEmpty,
-                         createTime: Long = System.currentTimeMillis,
-                         lastAccessTime: Long = -1,
-                         createVersion: String = "",
-                         properties: Map[String, String] = Map.empty,
-                         stats: Option[CatalogStatistics] = None,
-                         viewText: Option[String] = None,
-                         comment: Option[String] = None,
-                         unsupportedFeatures: Seq[String] = Seq.empty,
-                         tracksPartitionsInCatalog: Boolean = false,
-                         schemaPreservesCase: Boolean = true,
-                         ignoredProperties: Map[String, String] = Map.empty,
-                         viewOriginalText: Option[String] = None) {
+   identifier: TableIdentifier,
+   tableType: CatalogTableType,
+   storage: CatalogStorageFormat,
+   schema: StructType,
+   provider: Option[String] = None,
+   partitionColumnNames: Seq[String] = Seq.empty,
+   bucketSpec: Option[BucketSpec] = None,
+   owner: String = CurrentUserContext.getCurrentUserOrEmpty,
+   createTime: Long = System.currentTimeMillis,
+   lastAccessTime: Long = -1,
+   createVersion: String = "",
+   properties: Map[String, String] = Map.empty,
+   stats: Option[CatalogStatistics] = None,
+   viewText: Option[String] = None,
+   comment: Option[String] = None,
+   unsupportedFeatures: Seq[String] = Seq.empty,
+   tracksPartitionsInCatalog: Boolean = false,
+   schemaPreservesCase: Boolean = true,
+   ignoredProperties: Map[String, String] = Map.empty,
+   viewOriginalText: Option[String] = None) {
 
   import CatalogTable._
 
@@ -581,12 +581,12 @@ case class CatalogTable(
 
   /** Syntactic sugar to update a field in `storage`. */
   def withNewStorage(
-                      locationUri: Option[URI] = storage.locationUri,
-                      inputFormat: Option[String] = storage.inputFormat,
-                      outputFormat: Option[String] = storage.outputFormat,
-                      compressed: Boolean = false,
-                      serde: Option[String] = storage.serde,
-                      properties: Map[String, String] = storage.properties): CatalogTable = {
+      locationUri: Option[URI] = storage.locationUri,
+      inputFormat: Option[String] = storage.inputFormat,
+      outputFormat: Option[String] = storage.outputFormat,
+      compressed: Boolean = false,
+      serde: Option[String] = storage.serde,
+      properties: Map[String, String] = storage.properties): CatalogTable = {
     copy(storage = CatalogStorageFormat(
       locationUri, inputFormat, outputFormat, serde, compressed, properties))
   }
@@ -849,9 +849,9 @@ object CatalogTable {
  * concepts of attributes in catalog.
  */
 case class CatalogStatistics(
-                              sizeInBytes: BigInt,
-                              rowCount: Option[BigInt] = None,
-                              colStats: Map[String, CatalogColumnStat] = Map.empty) {
+    sizeInBytes: BigInt,
+    rowCount: Option[BigInt] = None,
+    colStats: Map[String, CatalogColumnStat] = Map.empty) {
 
   /**
    * Convert [[CatalogStatistics]] to [[Statistics]], and match column stats to attributes based
@@ -882,14 +882,14 @@ case class CatalogStatistics(
  * This class of statistics for a column is used in [[CatalogTable]] to interact with metastore.
  */
 case class CatalogColumnStat(
-                              distinctCount: Option[BigInt] = None,
-                              min: Option[String] = None,
-                              max: Option[String] = None,
-                              nullCount: Option[BigInt] = None,
-                              avgLen: Option[Long] = None,
-                              maxLen: Option[Long] = None,
-                              histogram: Option[Histogram] = None,
-                              version: Int = CatalogColumnStat.VERSION) {
+    distinctCount: Option[BigInt] = None,
+    min: Option[String] = None,
+    max: Option[String] = None,
+    nullCount: Option[BigInt] = None,
+    avgLen: Option[Long] = None,
+    maxLen: Option[Long] = None,
+    histogram: Option[Histogram] = None,
+    version: Int = CatalogColumnStat.VERSION) {
 
   /**
    * Returns a map from string to string that can be used to serialize the column stats.
@@ -926,8 +926,8 @@ case class CatalogColumnStat(
 
   /** Convert [[CatalogColumnStat]] to [[ColumnStat]]. */
   def toPlanStat(
-                  colName: String,
-                  dataType: DataType): ColumnStat =
+    colName: String,
+    dataType: DataType): ColumnStat =
     ColumnStat(
       distinctCount = distinctCount,
       min = min.map(CatalogColumnStat.fromExternalString(_, colName, dataType, version)),
@@ -954,10 +954,10 @@ object CatalogColumnStat extends Logging {
   val VERSION = 2
 
   def getTimestampFormatter(
-                             isParsing: Boolean,
-                             format: String = "yyyy-MM-dd HH:mm:ss.SSSSSS",
-                             zoneId: ZoneId = ZoneOffset.UTC,
-                             forTimestampNTZ: Boolean = false): TimestampFormatter = {
+   isParsing: Boolean,
+   format: String = "yyyy-MM-dd HH:mm:ss.SSSSSS",
+   zoneId: ZoneId = ZoneOffset.UTC,
+   forTimestampNTZ: Boolean = false): TimestampFormatter = {
     TimestampFormatter(
       format = format,
       zoneId = zoneId,
