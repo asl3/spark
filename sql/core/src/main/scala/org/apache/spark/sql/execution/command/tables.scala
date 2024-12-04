@@ -726,11 +726,8 @@ case class DescribeTableCommand(
     if (!catalog.isTempView(table)) {
       val metadata = catalog.getTableRawMetadata(table)
 
-      // Add tableName
       addKeyValueToJson(result, "table_name", JString(metadata.identifier.table))
-      println("***** table_name *****", metadata.identifier.table)
 
-      // Combine any multi-level namespaces
       val catalogNameArr = table.catalog.map(s => s""""$s"""").mkString("[", ",", "]")
       val databaseNameArr = table.database.map(s => s""""$s"""").mkString("[", ",", "]")
       addKeyValueToJson(result, "catalog_names", parse(catalogNameArr))
@@ -747,24 +744,11 @@ case class DescribeTableCommand(
       if (partitionSpec.nonEmpty) {
         // Outputs the partition-specific info for the DDL command:
         // "DESCRIBE [EXTENDED|FORMATTED] table_name PARTITION (partitionVal*)"
-        // TODO: is this needed for json?
         describePartitionInfoJson(sparkSession, catalog, metadata, result)
       } else {
-        // TODO: revisit all the code in else block
-        //      val excludedTableInfo = Set("Partition Columns", "Schema")
-        //      val filteredTableInfo = metadata.toLinkedHashMap.filterNot { case (key, _) =>
-        //        excludedTableInfo.contains(key)
-        //      }
-        //
-        //      val tableInfoJson = filteredTableInfo.foreach { case (key, value) =>
-        //        addKeyValueToJson(result, key, JString(value))
-        //      }
-
         describeFormattedTableInfoJson(metadata, result)
       }
     } else {
-      // Describe the cols
-      // TODO: Add these fields to the columns list: default, partition_index
       describeColsJson(schema, result, header = false)
     }
 
@@ -775,28 +759,10 @@ case class DescribeTableCommand(
     str.toLowerCase().replace(" ", "_")
   }
 
-//  private def normalizeJson(jsonStr: String): String = {
-//    val parsedJson = parse(jsonStr)
-//
-//    def normalizeKeys(json: JValue): JValue = json match {
-//      case JObject(fields) =>
-//        JObject(fields.map { case (key, value) =>
-//          val normalizedKey = key.toLowerCase().replace(" ", "_")
-//          (normalizedKey, normalizeKeys(value))
-//        })
-//      case JArray(items) => JArray(items.map(normalizeKeys))
-//      case other => other
-//    }
-//
-//    compact(render(normalizeKeys(parsedJson)))
-//  }
-
   private def describeColsJson(
     schema: StructType,
     buffer: ArrayBuffer[Row],
     header: Boolean): Unit = {
-
-    // Retrieve default column values if they exist
     val defaultValuesMap = Option(ResolveDefaultColumns.getDescribeMetadata(schema))
       .getOrElse(Seq.empty)
       .collect { case (name, _, defaultValue) => name -> defaultValue }
@@ -816,9 +782,6 @@ case class DescribeTableCommand(
          |  $defaultValueJson
          |}""".stripMargin
     }.mkString("[", ",", "]")
-
-    println("***** columnsJson *****")
-    println(columnsJson)
 
     addKeyValueToJson(buffer, "columns", parse(columnsJson))
   }
@@ -1003,19 +966,6 @@ case class DescribeTableCommand(
     val partition = catalog.getPartition(table, normalizedPartSpec)
     if (isExtended) describeFormattedDetailedPartitionInfo(table, metadata, partition, result)
   }
-
-//  private def describePartitionInfoJson(
-//     spark: SparkSession,
-//     catalog: SessionCatalog,
-//     metadata: CatalogTable,
-//     result: ArrayBuffer[Row]): Unit = {
-//    if (metadata.tableType == CatalogTableType.VIEW) {
-//      throw QueryCompilationErrors.descPartitionNotAllowedOnView(table.identifier)
-//    }
-//
-//    // TODO: combine into same method
-//    describeFormattedDetailedPartitionInfoJson(table, metadata, partition, result)
-//  }
 
   private def describeFormattedDetailedPartitionInfo(
       tableIdentifier: TableIdentifier,
