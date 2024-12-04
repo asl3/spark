@@ -26,6 +26,7 @@ import org.apache.spark.{SparkConf, SparkException, SparkIllegalArgumentExceptio
 import org.apache.spark.sql.catalyst.{ExtendedAnalysisException, InternalRow}
 import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.expressions.aggregate.Mode
+import org.apache.spark.sql.catalyst.util.CollationFactory
 import org.apache.spark.sql.internal.{SqlApiConf, SQLConf}
 import org.apache.spark.sql.test.SharedSparkSession
 import org.apache.spark.sql.types._
@@ -40,6 +41,7 @@ class CollationSQLExpressionsSuite
 
   private val testSuppCollations = Seq("UTF8_BINARY", "UTF8_LCASE", "UNICODE", "UNICODE_CI")
   private val testAdditionalCollations = Seq("UNICODE", "SR", "SR_CI", "SR_AI", "SR_CI_AI")
+  private val fullyQualifiedPrefix = s"${CollationFactory.CATALOG}.${CollationFactory.SCHEMA}."
 
   test("Support Md5 hash expression with collation") {
     case class Md5TestCase(
@@ -200,10 +202,10 @@ class CollationSQLExpressionsSuite
       Murmur3HashTestCase("Spark  ", "UTF8_BINARY_RTRIM", 1779328737),
       Murmur3HashTestCase("Spark", "UTF8_LCASE", -1928694360),
       Murmur3HashTestCase("Spark  ", "UTF8_LCASE_RTRIM", -1928694360),
-      Murmur3HashTestCase("SQL", "UNICODE", -1923567940),
-      Murmur3HashTestCase("SQL ", "UNICODE_RTRIM", -1923567940),
-      Murmur3HashTestCase("SQL", "UNICODE_CI", 1029527950),
-      Murmur3HashTestCase("SQL ", "UNICODE_CI_RTRIM", 1029527950)
+      Murmur3HashTestCase("SQL", "UNICODE", 1483684981),
+      Murmur3HashTestCase("SQL ", "UNICODE_RTRIM", 1483684981),
+      Murmur3HashTestCase("SQL", "UNICODE_CI", 279787709),
+      Murmur3HashTestCase("SQL ", "UNICODE_CI_RTRIM", 279787709)
     )
 
     // Supported collations
@@ -232,10 +234,10 @@ class CollationSQLExpressionsSuite
       XxHash64TestCase("Spark ", "UTF8_BINARY_RTRIM", 6480371823304753502L),
       XxHash64TestCase("Spark", "UTF8_LCASE", -3142112654825786434L),
       XxHash64TestCase("Spark ", "UTF8_LCASE_RTRIM", -3142112654825786434L),
-      XxHash64TestCase("SQL", "UNICODE", 5964849564945649886L),
-      XxHash64TestCase("SQL ", "UNICODE_RTRIM", 5964849564945649886L),
-      XxHash64TestCase("SQL", "UNICODE_CI", 3732497619779520590L),
-      XxHash64TestCase("SQL ", "UNICODE_CI_RTRIM", 3732497619779520590L)
+      XxHash64TestCase("SQL", "UNICODE", 7549349329256749019L),
+      XxHash64TestCase("SQL ", "UNICODE_RTRIM", 7549349329256749019L),
+      XxHash64TestCase("SQL", "UNICODE_CI", -3010409544364398863L),
+      XxHash64TestCase("SQL ", "UNICODE_CI_RTRIM", -3010409544364398863L)
     )
 
     // Supported collations
@@ -376,6 +378,10 @@ class CollationSQLExpressionsSuite
           StructField("B", DoubleType, nullable = true)
         )),
       CsvToStructsTestCase("\"Spark\"", "UNICODE", "'a STRING'", "",
+        Row("Spark"), Seq(
+          StructField("a", StringType, nullable = true)
+        )),
+      CsvToStructsTestCase("\"Spark\"", "UTF8_BINARY", "'a STRING COLLATE UNICODE'", "",
         Row("Spark"), Seq(
           StructField("a", StringType("UNICODE"), nullable = true)
         )),
@@ -1292,6 +1298,10 @@ class CollationSQLExpressionsSuite
         )),
       XmlToStructsTestCase("<p><s>Spark</s></p>", "UNICODE", "'s STRING'", "",
         Row("Spark"), Seq(
+          StructField("s", StringType, nullable = true)
+        )),
+      XmlToStructsTestCase("<p><s>Spark</s></p>", "UTF8_BINARY", "'s STRING COLLATE UNICODE'", "",
+        Row("Spark"), Seq(
           StructField("s", StringType("UNICODE"), nullable = true)
         )),
       XmlToStructsTestCase("<p><time>26/08/2015</time></p>", "UNICODE_CI", "'time Timestamp'",
@@ -1515,8 +1525,13 @@ class CollationSQLExpressionsSuite
     val testCases = Seq(
       VariantGetTestCase("{\"a\": 1}", "$.a", "int", "UTF8_BINARY", 1, IntegerType),
       VariantGetTestCase("{\"a\": 1}", "$.b", "int", "UTF8_LCASE", null, IntegerType),
-      VariantGetTestCase("[1, \"2\"]", "$[1]", "string", "UNICODE", "2", StringType("UNICODE")),
+      VariantGetTestCase("[1, \"2\"]", "$[1]", "string", "UNICODE", "2",
+        StringType),
+      VariantGetTestCase("[1, \"2\"]", "$[1]", "string collate unicode", "UTF8_BINARY", "2",
+        StringType("UNICODE")),
       VariantGetTestCase("[1, \"2\"]", "$[2]", "string", "UNICODE_CI", null,
+        StringType),
+      VariantGetTestCase("[1, \"2\"]", "$[2]", "string collate unicode_CI", "UTF8_BINARY", null,
         StringType("UNICODE_CI"))
     )
 
@@ -1991,9 +2006,11 @@ class CollationSQLExpressionsSuite
       }
       val tableName = s"t_${t1.collationId}_mode_nested_map_struct1"
       withTable(tableName) {
-        sql(s"CREATE TABLE ${tableName}(" +
-          s"i STRUCT<m1: MAP<STRING COLLATE ${t1.collationId}, INT>>) USING parquet")
-        sql(s"INSERT INTO ${tableName} VALUES ${getValuesToAdd(t1)}")
+        withSQLConf(SQLConf.ALLOW_COLLATIONS_IN_MAP_KEYS.key -> "true") {
+          sql(s"CREATE TABLE ${tableName}(" +
+            s"i STRUCT<m1: MAP<STRING COLLATE ${t1.collationId}, INT>>) USING parquet")
+          sql(s"INSERT INTO ${tableName} VALUES ${getValuesToAdd(t1)}")
+        }
         val query = "SELECT lower(cast(mode(i).m1 as string))" +
           s" FROM ${tableName}"
         val queryResult = sql(query)
@@ -2014,11 +2031,11 @@ class CollationSQLExpressionsSuite
       val queryExtractor = s"select collation(map($mapKey, $mapVal)[$mapKey])"
       val queryElementAt = s"select collation(element_at(map($mapKey, $mapVal), $mapKey))"
 
-      checkAnswer(sql(queryExtractor), Row(collation))
-      checkAnswer(sql(queryElementAt), Row(collation))
+      checkAnswer(sql(queryExtractor), Row(fullyQualifiedPrefix + collation))
+      checkAnswer(sql(queryElementAt), Row(fullyQualifiedPrefix + collation))
 
       withSQLConf(SqlApiConf.DEFAULT_COLLATION -> defaultCollation) {
-        val res = if (collateVal) "UTF8_LCASE" else defaultCollation
+        val res = fullyQualifiedPrefix + (if (collateVal) "UTF8_LCASE" else defaultCollation)
         checkAnswer(sql(queryExtractor), Row(res))
         checkAnswer(sql(queryElementAt), Row(res))
       }
@@ -2416,8 +2433,15 @@ class CollationSQLExpressionsSuite
            |collate('${testCase.left}', '${testCase.leftCollation}'))=
            |collate('${testCase.right}', '${testCase.rightCollation}');
            |""".stripMargin
-      val testQuery = sql(query)
-      checkAnswer(testQuery, Row(testCase.result))
+
+      if (testCase.leftCollation == testCase.rightCollation) {
+        checkAnswer(sql(query), Row(testCase.result))
+      } else {
+        val exception = intercept[AnalysisException] {
+          sql(query)
+        }
+        assert(exception.getCondition === "COLLATION_MISMATCH.EXPLICIT")
+      }
     })
 
     val queryPass =
@@ -3147,7 +3171,7 @@ class CollationSQLExpressionsSuite
       HyperLogLogPlusPlusTestCase("utf8_lcase", Seq("a", "a", "A", "z", "zz", "ZZ", "w", "AA",
         "aA", "Aa", "aa"), Seq(Row(5))),
       HyperLogLogPlusPlusTestCase("UNICODE", Seq("a", "a", "A", "z", "zz", "ZZ", "w", "AA",
-        "aA", "Aa", "aa"), Seq(Row(10))),
+        "aA", "Aa", "aa"), Seq(Row(9))),
       HyperLogLogPlusPlusTestCase("UNICODE_CI", Seq("a", "a", "A", "z", "zz", "ZZ", "w", "AA",
         "aA", "Aa", "aa"), Seq(Row(5)))
     )

@@ -48,7 +48,7 @@ compoundOrSingleStatement
     ;
 
 singleCompoundStatement
-    : beginEndCompoundBlock SEMICOLON? EOF
+    : BEGIN compoundBody END SEMICOLON? EOF
     ;
 
 beginEndCompoundBlock
@@ -70,6 +70,7 @@ compoundStatement
     | leaveStatement
     | iterateStatement
     | loopStatement
+    | forStatement
     ;
 
 setStatementWithOptionalVarKeyword
@@ -109,6 +110,10 @@ caseStatement
 
 loopStatement
     : beginLabel? LOOP compoundBody END LOOP endLabel?
+    ;
+
+forStatement
+    : beginLabel? FOR (multipartIdentifier AS)? query DO compoundBody END FOR endLabel?
     ;
 
 singleStatement
@@ -1232,7 +1237,7 @@ colPosition
     ;
 
 collateClause
-    : COLLATE collationName=identifier
+    : COLLATE collationName=multipartIdentifier
     ;
 
 type
@@ -1506,8 +1511,13 @@ version
     ;
 
 operatorPipeRightSide
-    : selectClause
-    | whereClause
+    : selectClause windowClause?
+    | EXTEND extendList=namedExpressionSeq
+    | SET operatorPipeSetAssignmentSeq
+    // Note that the WINDOW clause is not allowed in the WHERE pipe operator, but we add it here in
+    // the grammar simply for purposes of catching this invalid syntax and throwing a specific
+    // dedicated error message.
+    | whereClause windowClause?
     // The following two cases match the PIVOT or UNPIVOT clause, respectively.
     // For each one, we add the other clause as an option in order to return high-quality error
     // messages in the event that both are present (this is not allowed).
@@ -1518,6 +1528,15 @@ operatorPipeRightSide
     | operator=(UNION | EXCEPT | SETMINUS | INTERSECT) setQuantifier? right=queryTerm
     | queryOrganization
     | AGGREGATE namedExpressionSeq? aggregationClause?
+    ;
+
+operatorPipeSetAssignmentSeq
+    : ident+=errorCapturingIdentifier
+        (DOT errorCapturingIdentifier)*  // This is invalid syntax; we just capture it here.
+        EQ expression
+        (COMMA ident+=errorCapturingIdentifier
+          (DOT errorCapturingIdentifier)*  // This is invalid syntax; we just capture it here.
+          EQ expression)*
     ;
 
 // When `SQL_standard_keyword_behavior=true`, there are 2 kinds of keywords in Spark SQL.
@@ -1618,6 +1637,7 @@ ansiNonReserved
     | EXISTS
     | EXPLAIN
     | EXPORT
+    | EXTEND
     | EXTENDED
     | EXTERNAL
     | EXTRACT
@@ -1965,6 +1985,7 @@ nonReserved
     | EXISTS
     | EXPLAIN
     | EXPORT
+    | EXTEND
     | EXTENDED
     | EXTERNAL
     | EXTRACT

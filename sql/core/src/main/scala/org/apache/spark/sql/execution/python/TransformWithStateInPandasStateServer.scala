@@ -120,6 +120,8 @@ class TransformWithStateInPandasStateServer(
   }
 
   /** Timer related class variables */
+  // An iterator to store all expired timer info. This is meant to be consumed only once per
+  // partition. This should be called after finishing handling all input rows.
   private var expiryTimestampIter: Option[Iterator[(Any, Long)]] =
     if (expiryTimerIterForTest != null) {
       Option(expiryTimerIterForTest)
@@ -343,6 +345,17 @@ class TransformWithStateInPandasStateServer(
           case _ =>
             throw new IllegalArgumentException("Invalid timer state method call")
         }
+      case StatefulProcessorCall.MethodCase.DELETEIFEXISTS =>
+        val stateName = message.getDeleteIfExists.getStateName
+        statefulProcessorHandle.deleteIfExists(stateName)
+        if (valueStates.contains(stateName)) {
+          valueStates.remove(stateName)
+        } else if (listStates.contains(stateName)) {
+          listStates.remove(stateName)
+        } else if (mapStates.contains(stateName)) {
+          mapStates.remove(stateName)
+        }
+        sendResponse(0)
       case _ =>
         throw new IllegalArgumentException("Invalid method call")
     }
@@ -591,20 +604,23 @@ class TransformWithStateInPandasStateServer(
     stateType match {
       case StateVariableType.ValueState => if (!valueStates.contains(stateName)) {
         val state = if (ttlDurationMs.isEmpty) {
-          statefulProcessorHandle.getValueState[Row](stateName, Encoders.row(schema))
+          statefulProcessorHandle.getValueState[Row](stateName, Encoders.row(schema),
+            TTLConfig.NONE)
+          } else {
+            statefulProcessorHandle.getValueState(
+              stateName, Encoders.row(schema), TTLConfig(Duration.ofMillis(ttlDurationMs.get)))
+          }
+          valueStates.put(stateName,
+            ValueStateInfo(state, schema, expressionEncoder.createDeserializer()))
+          sendResponse(0)
         } else {
-          statefulProcessorHandle.getValueState(
-            stateName, Encoders.row(schema), TTLConfig(Duration.ofMillis(ttlDurationMs.get)))
+          sendResponse(1, s"Value state $stateName already exists")
         }
-        valueStates.put(stateName,
-          ValueStateInfo(state, schema, expressionEncoder.createDeserializer()))
-        sendResponse(0)
-      } else {
-        sendResponse(1, s"Value state $stateName already exists")
-      }
+
       case StateVariableType.ListState => if (!listStates.contains(stateName)) {
         val state = if (ttlDurationMs.isEmpty) {
-          statefulProcessorHandle.getListState[Row](stateName, Encoders.row(schema))
+          statefulProcessorHandle.getListState[Row](stateName, Encoders.row(schema),
+            TTLConfig.NONE)
         } else {
           statefulProcessorHandle.getListState(
             stateName, Encoders.row(schema), TTLConfig(Duration.ofMillis(ttlDurationMs.get)))
@@ -616,12 +632,13 @@ class TransformWithStateInPandasStateServer(
       } else {
         sendResponse(1, s"List state $stateName already exists")
       }
+
       case StateVariableType.MapState => if (!mapStates.contains(stateName)) {
         val valueSchema = StructType.fromString(mapStateValueSchemaString)
         val valueExpressionEncoder = ExpressionEncoder(valueSchema).resolveAndBind()
         val state = if (ttlDurationMs.isEmpty) {
           statefulProcessorHandle.getMapState[Row, Row](stateName,
-            Encoders.row(schema), Encoders.row(valueSchema))
+            Encoders.row(schema), Encoders.row(valueSchema), TTLConfig.NONE)
         } else {
           statefulProcessorHandle.getMapState[Row, Row](stateName, Encoders.row(schema),
             Encoders.row(valueSchema), TTLConfig(Duration.ofMillis(ttlDurationMs.get)))
