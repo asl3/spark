@@ -201,8 +201,13 @@ class DescribeTableSuite extends v1.DescribeTableSuiteBase with CommandSuiteBase
         partition_values = Some(Map("c" -> "Us", "d" -> "1"))
       )
 
+      // exclude path from check
+      val filteredParsedStorageProperties =
+        parsedOutput.storage_properties.map(_.filterNot { case (key, _) => key == "path" })
+
       assert(expectedOutput ==
-        parsedOutput.copy(location = None, created_time = None, owner = None))
+        parsedOutput.copy(location = None, created_time = None, owner = None,
+          storage_properties = filteredParsedStorageProperties))
     }
   }
 

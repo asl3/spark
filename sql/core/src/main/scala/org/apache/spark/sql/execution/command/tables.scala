@@ -617,7 +617,7 @@ abstract class DescribeCommandBase extends LeafRunnableCommand {
       s"""{
          |  "id": ${id + 1},
          |  "name": "${column.name}",
-         |  "type": ${column.dataType.describeJson},
+         |  "type": ${column.dataType.jsonType},
          |  "comment": ${column.getComment().map(c => s"""$c""").getOrElse("null")}
          |}""".stripMargin
     }.mkString("[", ",", "]")
@@ -777,7 +777,7 @@ case class DescribeTableCommand(
       s"""{
          |  "id": ${id + 1},
          |  "name": "${column.name}",
-         |  "type": ${column.dataType.describeJson}
+         |  "type": ${column.dataType.jsonType}
          |  $commentField
          |  $defaultValueJson
          |}""".stripMargin
@@ -817,7 +817,7 @@ case class DescribeTableCommand(
         s"""{
            |  "id": ${id + 1},
            |  "name": "${column.name}",
-           |  "type": ${column.dataType.describeJson},
+           |  "type": ${column.dataType.jsonType},
            |  "comment": ${column.getComment().map(c => s"""$c""").getOrElse("null")}
            |}""".stripMargin
       }.mkString("[", ",", "]")
@@ -875,7 +875,7 @@ case class DescribeTableCommand(
         val (path, field) = nestedFieldOpt.get
         s"""{
            |  "name": "${(path :+ field.name).map(quoteIfNeeded).mkString(".")}",
-           |  "type": ${field.dataType.describeJson},
+           |  "type": ${field.dataType.jsonType},
            |  "comment": ${field.getComment().map(c => s""""$c"""").getOrElse("null")}
            |}""".stripMargin
       }.mkString("[", ",", "]")
