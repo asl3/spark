@@ -150,7 +150,6 @@ trait SQLQueryTestHelper extends Logging {
       }
     } else {
       SQLExecution.withNewExecutionId(df.queryExecution, Some(sql)) {
-          print(hiveResultString(df.queryExecution.executedPlan).map(replaceNotIncludedMsg))
           hiveResultString(df.queryExecution.executedPlan).map(replaceNotIncludedMsg)
       }
     }

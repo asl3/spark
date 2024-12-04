@@ -652,8 +652,6 @@ case class CatalogTable(
         .map { case (k, v) => s""""$k": "$v"""" }
         .mkString("{", ", ", "}")
 
-    print("\n **** tableProperties: " + tableProperties)
-
     val partitionColumns = partitionColumnNames
       .map(s => s""""$s"""")
       .mkString("[", ", ", "]")
