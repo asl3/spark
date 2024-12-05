@@ -97,7 +97,7 @@ case class CatalogStorageFormat(
     map
   }
 
-  def toJsonCompatibleLinkedHashMap: mutable.LinkedHashMap[String, String] = {
+  def toJsonLinkedHashMap: mutable.LinkedHashMap[String, String] = {
     val map = new mutable.LinkedHashMap[String, String]()
 
     locationUri.foreach(l => map.put("Location", s""""$l""""))
@@ -161,7 +161,7 @@ case class CatalogTablePartition(
     map
   }
 
-  def toJsonCompatibleLinkedHashMap: mutable.LinkedHashMap[String, String] = {
+  def toJsonLinkedHashMap: mutable.LinkedHashMap[String, String] = {
     val map = new mutable.LinkedHashMap[String, String]()
 
     // Convert the spec to a JSON array of key-value strings
@@ -174,7 +174,7 @@ case class CatalogTablePartition(
     }.mkString(", ")
     map.put("Partition Values", s"{$specJson}")
 
-    storage.toJsonCompatibleLinkedHashMap.map { case (k, v) =>
+    storage.toJsonLinkedHashMap.map { case (k, v) =>
       map.put(k, v)
     }
 
@@ -366,7 +366,7 @@ case class BucketSpec(
     )
   }
 
-  def toJsonCompatibleLinkedHashMap: mutable.LinkedHashMap[String, String] = {
+  def toJsonLinkedHashMap: mutable.LinkedHashMap[String, String] = {
     mutable.LinkedHashMap[String, String](
       "bucket_columns" -> bucketColumnNames.map(s => s""""$s"""").mkString("[", ", ", "]"),
       "sort_columns" -> sortColumnNames.map(s => s""""$s"""").mkString("[", ", ", "]")
@@ -637,7 +637,7 @@ case class CatalogTable(
     map
   }
 
-  def toJsonCompatibleLinkedHashMap: mutable.LinkedHashMap[String, String] = {
+  def toJsonLinkedHashMap: mutable.LinkedHashMap[String, String] = {
     val map = new mutable.LinkedHashMap[String, String]()
 
     val filteredTableProperties = SQLConf.get
@@ -670,7 +670,7 @@ case class CatalogTable(
     map.put("Type", s""""${tableType.name}"""")
     provider.foreach(provider => map.put("Provider", s""""$provider""""))
 
-    bucketSpec.foreach(spec => map ++= spec.toJsonCompatibleLinkedHashMap)
+    bucketSpec.foreach(spec => map ++= spec.toJsonLinkedHashMap)
     comment.foreach(comment => map.put("Comment", s""""$comment""""))
 
     if (tableType == CatalogTableType.VIEW) {

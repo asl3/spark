@@ -902,7 +902,7 @@ case class DescribeTableCommand(
     // Bucket info
     table.bucketSpec match {
       case Some(spec) =>
-        spec.toJsonCompatibleLinkedHashMap.map { case (key, value) =>
+        spec.toJsonLinkedHashMap.map { case (key, value) =>
           val jsonValue: JValue =
             Try(parse(value)) match {
               case scala.util.Success(parsedJson) =>
@@ -915,7 +915,7 @@ case class DescribeTableCommand(
         }
       case _ =>
     }
-    table.storage.toJsonCompatibleLinkedHashMap.map { case (key, value) =>
+    table.storage.toJsonLinkedHashMap.map { case (key, value) =>
       val jsonValue: JValue =
         Try(parse(value)) match {
           case scala.util.Success(parsedJson) =>
@@ -927,7 +927,7 @@ case class DescribeTableCommand(
       addKeyValueToJson(buffer, key, jsonValue)
     }
 
-    val filteredTableInfo = table.toJsonCompatibleLinkedHashMap.filterNot { case (key, _) =>
+    val filteredTableInfo = table.toJsonLinkedHashMap.filterNot { case (key, _) =>
       excludedTableInfo.contains(key.toLowerCase())
     }
 
@@ -1003,7 +1003,7 @@ case class DescribeTableCommand(
         spark.sessionState.conf.resolver)
       val partition = catalog.getPartition(table, normalizedPartSpec)
 
-      partition.toJsonCompatibleLinkedHashMap.map { case (key, value) =>
+      partition.toJsonLinkedHashMap.map { case (key, value) =>
         // Try to parse the value as JSON if it's array-like or object-like
         val jsonValue: JValue =
           Try(parse(value)) match {
@@ -1018,7 +1018,7 @@ case class DescribeTableCommand(
 
     val excludedTableInfo = Set("catalog", "schema", "database", "table", "partition_columns")
 
-    val detailedInfo = metadata.toJsonCompatibleLinkedHashMap.filterNot { case (key, _) =>
+    val detailedInfo = metadata.toJsonLinkedHashMap.filterNot { case (key, _) =>
       excludedTableInfo.contains(key.toLowerCase())
     }
 
@@ -1037,7 +1037,7 @@ case class DescribeTableCommand(
       // Bucket info
       metadata.bucketSpec match {
         case Some(spec) =>
-          spec.toJsonCompatibleLinkedHashMap.map { case (key, value) =>
+          spec.toJsonLinkedHashMap.map { case (key, value) =>
             val jsonValue: JValue =
               Try(parse(value)) match {
                 case scala.util.Success(parsedJson) =>
@@ -1050,7 +1050,7 @@ case class DescribeTableCommand(
           }
         case _ =>
       }
-      metadata.storage.toJsonCompatibleLinkedHashMap.map { case (key, value) =>
+      metadata.storage.toJsonLinkedHashMap.map { case (key, value) =>
         val jsonValue: JValue =
           Try(parse(value)) match {
             case scala.util.Success(parsedJson) =>
@@ -1336,7 +1336,7 @@ case class DescribeTableJsonCommand(
     // Bucket info
     table.bucketSpec match {
       case Some(spec) =>
-        spec.toJsonCompatibleLinkedHashMap.map { case (key, value) =>
+        spec.toJsonLinkedHashMap.map { case (key, value) =>
           val jsonValue: JValue =
             Try(parse(value)) match {
               case scala.util.Success(parsedJson) =>
@@ -1349,7 +1349,7 @@ case class DescribeTableJsonCommand(
         }
       case _ =>
     }
-    table.storage.toJsonCompatibleLinkedHashMap.map { case (key, value) =>
+    table.storage.toJsonLinkedHashMap.map { case (key, value) =>
       val jsonValue: JValue =
         Try(parse(value)) match {
           case scala.util.Success(parsedJson) =>
@@ -1361,7 +1361,7 @@ case class DescribeTableJsonCommand(
       addKeyValueToJson(buffer, key, jsonValue)
     }
 
-    val filteredTableInfo = table.toJsonCompatibleLinkedHashMap.filterNot { case (key, _) =>
+    val filteredTableInfo = table.toJsonLinkedHashMap.filterNot { case (key, _) =>
       excludedTableInfo.contains(key.toLowerCase())
     }
 
@@ -1437,7 +1437,7 @@ case class DescribeTableJsonCommand(
       spark.sessionState.conf.resolver)
     val partition = catalog.getPartition(table, normalizedPartSpec)
 
-    partition.toJsonCompatibleLinkedHashMap.map { case (key, value) =>
+    partition.toJsonLinkedHashMap.map { case (key, value) =>
       // Try to parse the value as JSON if it's array-like or object-like
       val jsonValue: JValue =
         Try(parse(value)) match {
@@ -1452,7 +1452,7 @@ case class DescribeTableJsonCommand(
 
     val excludedTableInfo = Set("catalog", "schema", "database", "table", "partition_columns")
 
-    val detailedInfo = metadata.toJsonCompatibleLinkedHashMap.filterNot { case (key, _) =>
+    val detailedInfo = metadata.toJsonLinkedHashMap.filterNot { case (key, _) =>
       excludedTableInfo.contains(key.toLowerCase())
     }
 
@@ -1471,7 +1471,7 @@ case class DescribeTableJsonCommand(
     // Bucket info
     metadata.bucketSpec match {
       case Some(spec) =>
-        spec.toJsonCompatibleLinkedHashMap.map { case (key, value) =>
+        spec.toJsonLinkedHashMap.map { case (key, value) =>
           val jsonValue: JValue =
             Try(parse(value)) match {
               case scala.util.Success(parsedJson) =>
@@ -1484,7 +1484,7 @@ case class DescribeTableJsonCommand(
         }
       case _ =>
     }
-    metadata.storage.toJsonCompatibleLinkedHashMap.map { case (key, value) =>
+    metadata.storage.toJsonLinkedHashMap.map { case (key, value) =>
       val jsonValue: JValue =
         Try(parse(value)) match {
           case scala.util.Success(parsedJson) =>
