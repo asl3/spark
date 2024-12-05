@@ -110,7 +110,7 @@ CreateViewCommand `spark_catalog`.`default`.`v`, SELECT 1, false, true, Persiste
 -- !query
 DESCRIBE EXTENDED v
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`default`.`v`, true, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`default`.`v`, true, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
@@ -142,7 +142,7 @@ CreateViewCommand `v`, SELECT 1, false, true, LocalTempView, UNSUPPORTED, true
 -- !query
 DESCRIBE EXTENDED v
 -- !query analysis
-DescribeTableCommand `v`, true, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `v`, true, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
@@ -194,7 +194,7 @@ Project [c1#x]
 -- !query
 DESCRIBE EXTENDED v
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`default`.`v`, true, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`default`.`v`, true, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
@@ -231,7 +231,7 @@ Project [c1#x]
 -- !query
 DESCRIBE EXTENDED v
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`default`.`v`, true, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`default`.`v`, true, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
@@ -289,7 +289,7 @@ Project [c1#x]
 -- !query
 DESCRIBE EXTENDED v
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`default`.`v`, true, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`default`.`v`, true, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
@@ -338,7 +338,7 @@ org.apache.spark.sql.AnalysisException
 -- !query
 DESCRIBE EXTENDED v
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`default`.`v`, true, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`default`.`v`, true, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
@@ -390,7 +390,7 @@ Project [c1#x]
 -- !query
 DESCRIBE EXTENDED v
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`default`.`v`, true, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`default`.`v`, true, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
@@ -435,7 +435,7 @@ Project [c1#x]
 -- !query
 DESCRIBE EXTENDED v
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`default`.`v`, true, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`default`.`v`, true, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
@@ -480,7 +480,7 @@ Project [c1#x]
 -- !query
 DESCRIBE EXTENDED v
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`default`.`v`, true, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`default`.`v`, true, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
@@ -541,7 +541,7 @@ org.apache.spark.sql.catalyst.ExtendedAnalysisException
 -- !query
 DESCRIBE EXTENDED v
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`default`.`v`, true, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`default`.`v`, true, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
@@ -589,7 +589,7 @@ Project [c1#x, c2#x]
 -- !query
 DESCRIBE EXTENDED v
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`default`.`v`, true, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`default`.`v`, true, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
@@ -625,7 +625,7 @@ org.apache.spark.sql.AnalysisException
 -- !query
 DESCRIBE EXTENDED v
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`default`.`v`, true, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`default`.`v`, true, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
@@ -661,7 +661,7 @@ org.apache.spark.sql.AnalysisException
 -- !query
 DESCRIBE EXTENDED v
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`default`.`v`, true, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`default`.`v`, true, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
@@ -693,7 +693,7 @@ SetCommand (spark.sql.legacy.viewSchemaBindingMode,Some(true))
 -- !query
 DESCRIBE EXTENDED v
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`default`.`v`, true, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`default`.`v`, true, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
@@ -717,7 +717,7 @@ SetCommand (spark.sql.legacy.viewSchemaCompensation,Some(true))
 -- !query
 DESCRIBE EXTENDED v
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`default`.`v`, true, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`default`.`v`, true, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
@@ -767,7 +767,7 @@ SetCommand (spark.sql.legacy.viewSchemaBindingMode,Some(true))
 -- !query
 DESCRIBE EXTENDED v
 -- !query analysis
-DescribeTableCommand `v`, true, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `v`, true, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
@@ -785,7 +785,7 @@ SetCommand (spark.sql.legacy.viewSchemaCompensation,Some(true))
 -- !query
 DESCRIBE EXTENDED v
 -- !query analysis
-DescribeTableCommand `v`, true, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `v`, true, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query

@@ -1144,6 +1144,13 @@
     ],
     "sqlState" : "42623"
   },
+  "DESCRIBE_JSON_NOT_EXTENDED" : {
+    "message" : [
+      "DESCRIBE ... AS JSON only supported when [EXTENDED|FORMATTED] is specified.",
+      "For example: `DESCRIBE EXTENDED TABLE t AS JSON` is supported but `DESCRIBE TABLE t AS JSON` is not."
+    ],
+    "sqlState" : "0A000"
+  },
   "DISTINCT_WINDOW_FUNCTION_UNSUPPORTED" : {
     "message" : [
       "Distinct window functions are not supported: <windowExpr>."
