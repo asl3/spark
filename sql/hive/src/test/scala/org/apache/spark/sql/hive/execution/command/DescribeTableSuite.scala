@@ -17,10 +17,10 @@
 
 package org.apache.spark.sql.hive.execution.command
 
- import org.json4s._
- import org.json4s.jackson.JsonMethods._
+import org.json4s._
+import org.json4s.jackson.JsonMethods._
 
-import org.apache.spark.sql.{QueryTest, Row}
+import org.apache.spark.sql.{AnalysisException, QueryTest, Row}
 import org.apache.spark.sql.connector.catalog.CatalogManager.SESSION_CATALOG_NAME
 import org.apache.spark.sql.connector.catalog.TableCatalog
 import org.apache.spark.sql.execution.command.v1
@@ -89,6 +89,28 @@ class DescribeTableSuite extends v1.DescribeTableSuiteBase with CommandSuiteBase
     }
   }
 
+  test("DESCRIBE AS JSON throws when not EXTENDED") {
+    withNamespaceAndTable("ns", "table") { t =>
+      val tableCreationStr =
+        s"""
+          |CREATE TABLE $t (a STRING, b INT, c STRING, d STRING) USING parquet
+          |  OPTIONS (a '1', b '2', password 'password')
+          |  PARTITIONED BY (c, d) CLUSTERED BY (a) SORTED BY (b ASC) INTO 2 BUCKETS
+          |  COMMENT 'table_comment'
+          |  TBLPROPERTIES (t 'test', password 'password')
+          |""".stripMargin
+      spark.sql(tableCreationStr)
+
+      val e1 = intercept[AnalysisException] {
+        spark.sql(s"DESCRIBE $t AS JSON")
+      }
+
+      checkError(
+        exception = e1,
+        condition = "DESCRIBE_JSON_NOT_EXTENDED")
+    }
+  }
+
   test("DESCRIBE AS JSON partitions, clusters, buckets") {
     withNamespaceAndTable("ns", "table") { t =>
       val tableCreationStr =
@@ -100,8 +122,8 @@ class DescribeTableSuite extends v1.DescribeTableSuiteBase with CommandSuiteBase
           |  TBLPROPERTIES (t 'test', password 'password')
           |""".stripMargin
       spark.sql(tableCreationStr)
-      val descriptionDf = spark.sql(s"DESCRIBE $t AS JSON")
-      val firstRow = descriptionDf.select("col_name").head()
+      val descriptionDf = spark.sql(s"DESCRIBE EXTENDED $t AS JSON")
+      val firstRow = descriptionDf.select("json_metadata").head()
       val jsonValue = firstRow.getString(0)
       val parsedOutput = parse(jsonValue).extract[DescribeTableOutput]
 
@@ -160,9 +182,11 @@ class DescribeTableSuite extends v1.DescribeTableSuiteBase with CommandSuiteBase
           |""".stripMargin
       spark.sql(tableCreationStr)
       spark.sql(s"ALTER TABLE $t ADD PARTITION (c='Us', d=1)")
-      val descriptionDf = spark.sql(s"DESCRIBE $t PARTITION (c='Us', d=1) AS JSON")
-      val firstRow = descriptionDf.select("col_name").head()
+      val descriptionDf = spark.sql(s"DESCRIBE FORMATTED $t PARTITION (c='Us', d=1) AS JSON")
+      print("\n **** descriptionDf: " + descriptionDf + "\n")
+      val firstRow = descriptionDf.select("json_metadata").head()
       val jsonValue = firstRow.getString(0)
+      print("\n **** jsonValue: " + jsonValue + "\n")
       val parsedOutput = parse(jsonValue).extract[DescribeTableOutput]
 
       val expectedOutput = DescribeTableOutput(
@@ -219,8 +243,8 @@ class DescribeTableSuite extends v1.DescribeTableSuiteBase with CommandSuiteBase
           |USING parquet COMMENT 'table_comment'
           |""".stripMargin
       spark.sql(tableCreationStr)
-      val descriptionDf = spark.sql(s"DESC d AS JSON")
-      val firstRow = descriptionDf.select("col_name").head()
+      val descriptionDf = spark.sql(s"DESC EXTENDED d AS JSON")
+      val firstRow = descriptionDf.select("json_metadata").head()
       val jsonValue = firstRow.getString(0)
       val parsedOutput = parse(jsonValue).extract[DescribeTableOutput]
 
@@ -265,8 +289,8 @@ class DescribeTableSuite extends v1.DescribeTableSuiteBase with CommandSuiteBase
           |""".stripMargin
       spark.sql(tableCreationStr)
       spark.sql("CREATE TEMPORARY VIEW temp_v AS SELECT * FROM t")
-      val descriptionDf = spark.sql(s"DESCRIBE temp_v AS JSON")
-      val firstRow = descriptionDf.select("col_name").head()
+      val descriptionDf = spark.sql(s"DESCRIBE EXTENDED temp_v AS JSON")
+      val firstRow = descriptionDf.select("json_metadata").head()
       val jsonValue = firstRow.getString(0)
       val parsedOutput = parse(jsonValue).extract[DescribeTableOutput]
 
@@ -310,8 +334,8 @@ class DescribeTableSuite extends v1.DescribeTableSuiteBase with CommandSuiteBase
           |  TBLPROPERTIES ('property1' = 'value1', 'password' = 'password')
         """.stripMargin
       spark.sql(tableCreationStr)
-      val descriptionDf = spark.sql(s"DESCRIBE c AS JSON")
-      val firstRow = descriptionDf.select("col_name").head()
+      val descriptionDf = spark.sql(s"DESCRIBE EXTENDED c AS JSON")
+      val firstRow = descriptionDf.select("json_metadata").head()
       val jsonValue = firstRow.getString(0)
       val parsedOutput = parse(jsonValue).extract[DescribeTableOutput]
 

@@ -155,7 +155,12 @@ class ResolveSessionCatalog(val catalogManager: CatalogManager)
     // Use v1 command to describe (temp) view, as v2 catalog doesn't support view yet.
     case DescribeRelation(
         ResolvedV1TableOrViewIdentifier(ident), partitionSpec, isExtended, asJson, output) =>
-      DescribeTableCommand(ident, partitionSpec, isExtended, asJson, output)
+      if (asJson) {
+        if (!isExtended) {
+          throw QueryCompilationErrors.describeJsonNotExtendedError()
+        }
+        DescribeTableJsonCommand(ident, partitionSpec, isExtended)
+      } else DescribeTableCommand(ident, partitionSpec, isExtended, output)
 
     case DescribeColumn(
          ResolvedViewIdentifier(ident), column: UnresolvedAttribute, isExtended, asJson, output) =>
