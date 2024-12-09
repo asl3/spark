@@ -80,6 +80,18 @@ struct<json_metadata:string,:string,:string>
 
 
 -- !query
+DESCRIBE t AS JSON
+-- !query schema
+struct<>
+-- !query output
+org.apache.spark.sql.AnalysisException
+{
+  "errorClass" : "DESCRIBE_JSON_NOT_EXTENDED",
+  "sqlState" : "0A000"
+}
+
+
+-- !query
 DESC default.t
 -- !query schema
 struct<col_name:string,data_type:string,comment:string>
@@ -497,28 +509,6 @@ d                   	string
 
 
 -- !query
-DESC EXTENDED TABLE temp_v AS JSON
--- !query schema
-struct<>
--- !query output
-org.apache.spark.sql.catalyst.ExtendedAnalysisException
-{
-  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
-  "sqlState" : "42P01",
-  "messageParameters" : {
-    "relationName" : "`TABLE`"
-  },
-  "queryContext" : [ {
-    "objectType" : "",
-    "objectName" : "",
-    "startIndex" : 15,
-    "stopIndex" : 19,
-    "fragment" : "TABLE"
-  } ]
-}
-
-
--- !query
 DESC FORMATTED temp_v
 -- !query schema
 struct<col_name:string,data_type:string,comment:string>
@@ -662,23 +652,6 @@ View Query Output Columns	[a, b, c, d]
 
 -- !query
 DESC v PARTITION (c='Us', d=1)
--- !query schema
-struct<>
--- !query output
-org.apache.spark.sql.AnalysisException
-{
-  "errorClass" : "FORBIDDEN_OPERATION",
-  "sqlState" : "42809",
-  "messageParameters" : {
-    "objectName" : "`v`",
-    "objectType" : "VIEW",
-    "statement" : "DESC PARTITION"
-  }
-}
-
-
--- !query
-DESC EXTENDED v PARTITION (c='Us', d=1) AS JSON
 -- !query schema
 struct<>
 -- !query output
@@ -1069,7 +1042,7 @@ DESC FORMATTED t2 as json
 -- !query schema
 struct<json_metadata:string,:string,:string>
 -- !query output
-{"table_name":"t2","catalog_names":["spark_catalog"],"database_names":["default"],"qualified_name":"spark_catalog.default.t2","columns":[{"id":1,"name":"a","type":{"type":"string"}},{"id":2,"name":"b","type":{"type":"integer"}},{"id":3,"name":"c","type":{"type":"string"}},{"id":4,"name":"d","type":{"type":"string"}}],"bucket_columns":["a"],"sort_columns":["b"],"location":"file:[not included in comparison]/{warehouse_dir}/t2","storage_properties":{"a":"1","b":"2","password":"*********(redacted)"},"created_time":"2024-12-09T04:10:45.603Z","last_access":"UNKNOWN","created_by":"Spark 4.0.0-SNAPSHOT","type":"MANAGED","provider":"parquet","comment":"table_comment","table_properties":{"password":"*********(redacted)","t":"test"},"partition_provider":"Catalog","partition_columns":["c","d"]}
+{"table_name":"t2","catalog_names":["spark_catalog"],"database_names":["default"],"qualified_name":"spark_catalog.default.t2","columns":[{"id":1,"name":"a","type":{"type":"string"}},{"id":2,"name":"b","type":{"type":"integer"}},{"id":3,"name":"c","type":{"type":"string"}},{"id":4,"name":"d","type":{"type":"string"}}],"bucket_columns":["a"],"sort_columns":["b"],"location":"file:[not included in comparison]/{warehouse_dir}/t2","storage_properties":{"a":"1","b":"2","password":"*********(redacted)"},"created_time":"2024-12-09T04:18:46.429Z","last_access":"UNKNOWN","created_by":"Spark 4.0.0-SNAPSHOT","type":"MANAGED","provider":"parquet","comment":"table_comment","table_properties":{"password":"*********(redacted)","t":"test"},"partition_provider":"Catalog","partition_columns":["c","d"]}
 
 
 -- !query

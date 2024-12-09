@@ -973,26 +973,6 @@ case class DescribeTableJsonCommand(
 
   }
 
-  private def describeFormattedDetailedPartitionInfo(
-                                                      tableIdentifier: TableIdentifier,
-                                                      table: CatalogTable,
-                                                      partition: CatalogTablePartition,
-                                                      buffer: ArrayBuffer[Row]): Unit = {
-    append(buffer, "", "", "")
-    append(buffer, "# Detailed Partition Information", "", "")
-    append(buffer, "Database", table.database, "")
-    append(buffer, "Table", tableIdentifier.table, "")
-    partition.toLinkedHashMap.foreach(s => append(buffer, s._1, s._2, ""))
-    append(buffer, "", "", "")
-    append(buffer, "# Storage Information", "", "")
-    table.bucketSpec match {
-      case Some(spec) =>
-        spec.toLinkedHashMap.foreach(s => append(buffer, s._1, s._2, ""))
-      case _ =>
-    }
-    table.storage.toLinkedHashMap.foreach(s => append(buffer, s._1, s._2, ""))
-  }
-
   private def describePartitionInfoJson(
    spark: SparkSession,
    catalog: SessionCatalog,

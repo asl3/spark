@@ -63,6 +63,16 @@ DescribeTableJsonCommand `spark_catalog`.`default`.`t`, true
 
 
 -- !query
+DESCRIBE t AS JSON
+-- !query analysis
+org.apache.spark.sql.AnalysisException
+{
+  "errorClass" : "DESCRIBE_JSON_NOT_EXTENDED",
+  "sqlState" : "0A000"
+}
+
+
+-- !query
 DESC default.t
 -- !query analysis
 DescribeTableCommand `spark_catalog`.`default`.`t`, false, [col_name#x, data_type#x, comment#x]
@@ -239,26 +249,6 @@ DescribeTableCommand `temp_v`, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
-DESC EXTENDED TABLE temp_v AS JSON
--- !query analysis
-org.apache.spark.sql.catalyst.ExtendedAnalysisException
-{
-  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
-  "sqlState" : "42P01",
-  "messageParameters" : {
-    "relationName" : "`TABLE`"
-  },
-  "queryContext" : [ {
-    "objectType" : "",
-    "objectName" : "",
-    "startIndex" : 15,
-    "stopIndex" : 19,
-    "fragment" : "TABLE"
-  } ]
-}
-
-
--- !query
 DESC FORMATTED temp_v
 -- !query analysis
 DescribeTableCommand `temp_v`, true, [col_name#x, data_type#x, comment#x]
@@ -323,21 +313,6 @@ DescribeTableCommand `spark_catalog`.`default`.`v`, true, [col_name#x, data_type
 
 -- !query
 DESC v PARTITION (c='Us', d=1)
--- !query analysis
-org.apache.spark.sql.AnalysisException
-{
-  "errorClass" : "FORBIDDEN_OPERATION",
-  "sqlState" : "42809",
-  "messageParameters" : {
-    "objectName" : "`v`",
-    "objectType" : "VIEW",
-    "statement" : "DESC PARTITION"
-  }
-}
-
-
--- !query
-DESC EXTENDED v PARTITION (c='Us', d=1) AS JSON
 -- !query analysis
 org.apache.spark.sql.AnalysisException
 {

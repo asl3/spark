@@ -23,6 +23,9 @@ DESCRIBE t;
 
 DESCRIBE EXTENDED t AS JSON;
 
+-- AnalysisException: DESCRIBE TABLE ... AS JSON must be extended
+DESCRIBE t AS JSON;
+
 DESC default.t;
 
 DESC TABLE t;
@@ -74,8 +77,6 @@ DESC EXTENDED temp_v AS JSON;
 
 DESC TABLE temp_v;
 
-DESC EXTENDED TABLE temp_v AS JSON;
-
 DESC FORMATTED temp_v;
 
 DESC EXTENDED temp_v;
@@ -99,8 +100,6 @@ DESC EXTENDED v;
 
 -- AnalysisException DESC PARTITION is not allowed on a view
 DESC v PARTITION (c='Us', d=1);
-
-DESC EXTENDED v PARTITION (c='Us', d=1) AS JSON;
 
 -- Explain Describe Table
 EXPLAIN DESC t;
