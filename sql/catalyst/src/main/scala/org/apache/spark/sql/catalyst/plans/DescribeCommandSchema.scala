@@ -27,9 +27,9 @@ private[sql] object DescribeCommandSchema {
         AttributeReference("json_metadata", StringType, nullable = false,
           new MetadataBuilder().putString("comment", "JSON metadata of the table").build())(),
         AttributeReference("", StringType, nullable = true,
-          new MetadataBuilder().putString("comment", "data type of the column").build())(),
+          new MetadataBuilder().putString("", "").build())(),
         AttributeReference("", StringType, nullable = true,
-          new MetadataBuilder().putString("comment", "comment of the column").build())()
+          new MetadataBuilder().putString("", "").build())()
       )
     } else {
       Seq(AttributeReference("col_name", StringType, nullable = false,
@@ -40,14 +40,6 @@ private[sql] object DescribeCommandSchema {
           new MetadataBuilder().putString("comment", "comment of the column").build())())
     }
   }
-
-//    def describeTableJsonAttributes(): Seq[AttributeReference] = Seq(
-//    AttributeReference("json_metadata", StringType, nullable = false,
-//      new MetadataBuilder().putString("comment", "JSON metadata of the table").build())(),
-//    AttributeReference("", StringType, nullable = true,
-//      new MetadataBuilder().putString("comment", "").build())(),
-//    AttributeReference("", StringType, nullable = true,
-//      new MetadataBuilder().putString("comment", "").build())())
 
   def describeColumnAttributes(): Seq[AttributeReference] = Seq(
     AttributeReference("info_name", StringType, nullable = false,

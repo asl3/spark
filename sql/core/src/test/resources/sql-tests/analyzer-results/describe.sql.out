@@ -57,13 +57,9 @@ DescribeTableCommand `spark_catalog`.`default`.`t`, false, [col_name#x, data_typ
 
 
 -- !query
-DESCRIBE t AS JSON
+DESCRIBE EXTENDED t AS JSON
 -- !query analysis
-org.apache.spark.sql.AnalysisException
-{
-  "errorClass" : "DESCRIBE_JSON_NOT_EXTENDED",
-  "sqlState" : "0A000"
-}
+DescribeTableJsonCommand `spark_catalog`.`default`.`t`, true
 
 
 -- !query
@@ -133,13 +129,9 @@ DescribeTableCommand `spark_catalog`.`default`.`t`, [c=Us, d=1], false, [col_nam
 
 
 -- !query
-DESC t PARTITION (c='Us', d=1) AS JSON
+DESC EXTENDED t PARTITION (c='Us', d=1) AS JSON
 -- !query analysis
-org.apache.spark.sql.AnalysisException
-{
-  "errorClass" : "DESCRIBE_JSON_NOT_EXTENDED",
-  "sqlState" : "0A000"
-}
+DescribeTableJsonCommand `spark_catalog`.`default`.`t`, [c=Us, d=1], true
 
 
 -- !query
@@ -181,12 +173,16 @@ org.apache.spark.sql.catalyst.analysis.NoSuchPartitionException
 
 
 -- !query
-DESC t PARTITION (c='Us', d=2) AS JSON
+DESC EXTENDED t PARTITION (c='Us', d=2) AS JSON
 -- !query analysis
-org.apache.spark.sql.AnalysisException
+org.apache.spark.sql.catalyst.analysis.NoSuchPartitionException
 {
-  "errorClass" : "DESCRIBE_JSON_NOT_EXTENDED",
-  "sqlState" : "0A000"
+  "errorClass" : "PARTITIONS_NOT_FOUND",
+  "sqlState" : "428FT",
+  "messageParameters" : {
+    "partitionList" : "PARTITION (`c` = Us, `d` = 2)",
+    "tableName" : "`default`.`t`"
+  }
 }
 
 
@@ -231,13 +227,9 @@ DescribeTableCommand `temp_v`, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
-DESC temp_v AS JSON
+DESC EXTENDED temp_v AS JSON
 -- !query analysis
-org.apache.spark.sql.AnalysisException
-{
-  "errorClass" : "DESCRIBE_JSON_NOT_EXTENDED",
-  "sqlState" : "0A000"
-}
+DescribeTableJsonCommand `temp_v`, true
 
 
 -- !query
@@ -247,12 +239,22 @@ DescribeTableCommand `temp_v`, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
-DESC TABLE temp_v AS JSON
+DESC EXTENDED TABLE temp_v AS JSON
 -- !query analysis
-org.apache.spark.sql.AnalysisException
+org.apache.spark.sql.catalyst.ExtendedAnalysisException
 {
-  "errorClass" : "DESCRIBE_JSON_NOT_EXTENDED",
-  "sqlState" : "0A000"
+  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
+  "sqlState" : "42P01",
+  "messageParameters" : {
+    "relationName" : "`TABLE`"
+  },
+  "queryContext" : [ {
+    "objectType" : "",
+    "objectName" : "",
+    "startIndex" : 15,
+    "stopIndex" : 19,
+    "fragment" : "TABLE"
+  } ]
 }
 
 
@@ -335,12 +337,17 @@ org.apache.spark.sql.AnalysisException
 
 
 -- !query
-DESC v PARTITION (c='Us', d=1) AS JSON
+DESC EXTENDED v PARTITION (c='Us', d=1) AS JSON
 -- !query analysis
 org.apache.spark.sql.AnalysisException
 {
-  "errorClass" : "DESCRIBE_JSON_NOT_EXTENDED",
-  "sqlState" : "0A000"
+  "errorClass" : "FORBIDDEN_OPERATION",
+  "sqlState" : "42809",
+  "messageParameters" : {
+    "objectName" : "`v`",
+    "objectType" : "VIEW",
+    "statement" : "DESC PARTITION"
+  }
 }
 
 
@@ -351,9 +358,9 @@ ExplainCommand 'DescribeRelation false, false, [col_name#x, data_type#x, comment
 
 
 -- !query
-EXPLAIN DESC t AS JSON
+EXPLAIN DESC EXTENDED t AS JSON
 -- !query analysis
-ExplainCommand 'DescribeRelation false, true, [col_name#x, data_type#x, comment#x], SimpleMode
+ExplainCommand 'DescribeRelation true, true, [col_name#x, data_type#x, comment#x], SimpleMode
 
 
 -- !query
@@ -381,9 +388,9 @@ ExplainCommand 'DescribeRelation [c=Us, d=2], false, false, [col_name#x, data_ty
 
 
 -- !query
-EXPLAIN DESCRIBE t PARTITION (c='Us', d=2) AS JSON
+EXPLAIN DESCRIBE EXTENDED t PARTITION (c='Us', d=2) AS JSON
 -- !query analysis
-ExplainCommand 'DescribeRelation [c=Us, d=2], false, true, [col_name#x, data_type#x, comment#x], SimpleMode
+ExplainCommand 'DescribeRelation [c=Us, d=2], true, true, [col_name#x, data_type#x, comment#x], SimpleMode
 
 
 -- !query
@@ -431,16 +438,6 @@ DescribeTableCommand `spark_catalog`.`default`.`d`, false, [col_name#x, data_typ
 
 
 -- !query
-DESC d AS JSON
--- !query analysis
-org.apache.spark.sql.AnalysisException
-{
-  "errorClass" : "DESCRIBE_JSON_NOT_EXTENDED",
-  "sqlState" : "0A000"
-}
-
-
--- !query
 DESC EXTENDED d
 -- !query analysis
 DescribeTableCommand `spark_catalog`.`default`.`d`, true, [col_name#x, data_type#x, comment#x]
@@ -484,13 +481,9 @@ DescribeTableCommand `spark_catalog`.`default`.`e`, false, [col_name#x, data_typ
 
 
 -- !query
-DESC e AS JSON
+DESC EXTENDED e AS JSON
 -- !query analysis
-org.apache.spark.sql.AnalysisException
-{
-  "errorClass" : "DESCRIBE_JSON_NOT_EXTENDED",
-  "sqlState" : "0A000"
-}
+DescribeTableJsonCommand `spark_catalog`.`default`.`e`, true
 
 
 -- !query
@@ -555,13 +548,9 @@ DescribeTableCommand `spark_catalog`.`default`.`t2`, false, [col_name#x, data_ty
 
 
 -- !query
-DESC t2 as json
+DESC FORMATTED t2 as json
 -- !query analysis
-org.apache.spark.sql.AnalysisException
-{
-  "errorClass" : "DESCRIBE_JSON_NOT_EXTENDED",
-  "sqlState" : "0A000"
-}
+DescribeTableJsonCommand `spark_catalog`.`default`.`t2`, true
 
 
 -- !query
@@ -598,10 +587,6 @@ org.apache.spark.sql.catalyst.analysis.TableAlreadyExistsException
 
 
 -- !query
-DESC c AS JSON
+DESC FORMATTED c AS JSON
 -- !query analysis
-org.apache.spark.sql.AnalysisException
-{
-  "errorClass" : "DESCRIBE_JSON_NOT_EXTENDED",
-  "sqlState" : "0A000"
-}
+DescribeTableJsonCommand `spark_catalog`.`default`.`c`, true

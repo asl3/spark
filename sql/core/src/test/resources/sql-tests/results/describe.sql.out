@@ -72,15 +72,11 @@ d                   	string
 
 
 -- !query
-DESCRIBE t AS JSON
+DESCRIBE EXTENDED t AS JSON
 -- !query schema
-struct<>
+struct<json_metadata:string,:string,:string>
 -- !query output
-org.apache.spark.sql.AnalysisException
-{
-  "errorClass" : "DESCRIBE_JSON_NOT_EXTENDED",
-  "sqlState" : "0A000"
-}
+{"table_name":"t","catalog_names":["spark_catalog"],"database_names":["default"],"qualified_name":"spark_catalog.default.t","columns":[{"id":1,"name":"a","type":{"type":"string"}},{"id":2,"name":"b","type":{"type":"integer"}},{"id":3,"name":"c","type":{"type":"string"}},{"id":4,"name":"d","type":{"type":"string"}}],"bucket_columns":["a"],"sort_columns":["b"],"location": "[not included in comparison]/{warehouse_dir}/t","storage_properties":{"a":"1","b":"2","password":"*********(redacted)"},"created_time [not included in comparison]":"None","last_access [not included in comparison]":"None","created_by [not included in comparison]":"None","type":"MANAGED","provider":"parquet","comment":"table_comment","table_properties":{"e":"3","password":"*********(redacted)","t":"test"},"partition_provider":"Catalog","partition_columns":["c","d"]}
 
 
 -- !query
@@ -292,15 +288,11 @@ d                   	string
 
 
 -- !query
-DESC t PARTITION (c='Us', d=1) AS JSON
+DESC EXTENDED t PARTITION (c='Us', d=1) AS JSON
 -- !query schema
-struct<>
+struct<json_metadata:string,:string,:string>
 -- !query output
-org.apache.spark.sql.AnalysisException
-{
-  "errorClass" : "DESCRIBE_JSON_NOT_EXTENDED",
-  "sqlState" : "0A000"
-}
+{"table_name":"t","catalog_names":["spark_catalog"],"database_names":["default"],"qualified_name":"spark_catalog.default.t","columns":[{"id":1,"name":"a","type":{"type":"string"}},{"id":2,"name":"b","type":{"type":"integer"}},{"id":3,"name":"c","type":{"type":"string"}},{"id":4,"name":"d","type":{"type":"string"}}],"partition_values":{"c":"Us","d":"1"},"location": "[not included in comparison]/{warehouse_dir}/t/c=Us/d=1","storage_properties":{"a":"1","b":"2","password":"*********(redacted)"},"created_time [not included in comparison]":"None","last_access [not included in comparison]":"None","created_by [not included in comparison]":"None","type":"MANAGED","provider":"parquet","bucket_columns":["a"],"sort_columns":["b"],"table_properties":{"password":"*********(redacted)","t":"test"},"partition_provider":"Catalog","partition_columns":["c","d"]}
 
 
 -- !query
@@ -421,14 +413,18 @@ org.apache.spark.sql.catalyst.analysis.NoSuchPartitionException
 
 
 -- !query
-DESC t PARTITION (c='Us', d=2) AS JSON
+DESC EXTENDED t PARTITION (c='Us', d=2) AS JSON
 -- !query schema
 struct<>
 -- !query output
-org.apache.spark.sql.AnalysisException
+org.apache.spark.sql.catalyst.analysis.NoSuchPartitionException
 {
-  "errorClass" : "DESCRIBE_JSON_NOT_EXTENDED",
-  "sqlState" : "0A000"
+  "errorClass" : "PARTITIONS_NOT_FOUND",
+  "sqlState" : "428FT",
+  "messageParameters" : {
+    "partitionList" : "PARTITION (`c` = Us, `d` = 2)",
+    "tableName" : "`default`.`t`"
+  }
 }
 
 
@@ -482,15 +478,11 @@ d                   	string
 
 
 -- !query
-DESC temp_v AS JSON
+DESC EXTENDED temp_v AS JSON
 -- !query schema
-struct<>
+struct<json_metadata:string,:string,:string>
 -- !query output
-org.apache.spark.sql.AnalysisException
-{
-  "errorClass" : "DESCRIBE_JSON_NOT_EXTENDED",
-  "sqlState" : "0A000"
-}
+{"columns":[{"id":1,"name":"a","type":{"type":"string"}},{"id":2,"name":"b","type":{"type":"integer"}},{"id":3,"name":"c","type":{"type":"string"}},{"id":4,"name":"d","type":{"type":"string"}}]}
 
 
 -- !query
@@ -505,14 +497,24 @@ d                   	string
 
 
 -- !query
-DESC TABLE temp_v AS JSON
+DESC EXTENDED TABLE temp_v AS JSON
 -- !query schema
 struct<>
 -- !query output
-org.apache.spark.sql.AnalysisException
+org.apache.spark.sql.catalyst.ExtendedAnalysisException
 {
-  "errorClass" : "DESCRIBE_JSON_NOT_EXTENDED",
-  "sqlState" : "0A000"
+  "errorClass" : "TABLE_OR_VIEW_NOT_FOUND",
+  "sqlState" : "42P01",
+  "messageParameters" : {
+    "relationName" : "`TABLE`"
+  },
+  "queryContext" : [ {
+    "objectType" : "",
+    "objectName" : "",
+    "startIndex" : 15,
+    "stopIndex" : 19,
+    "fragment" : "TABLE"
+  } ]
 }
 
 
@@ -676,14 +678,19 @@ org.apache.spark.sql.AnalysisException
 
 
 -- !query
-DESC v PARTITION (c='Us', d=1) AS JSON
+DESC EXTENDED v PARTITION (c='Us', d=1) AS JSON
 -- !query schema
 struct<>
 -- !query output
 org.apache.spark.sql.AnalysisException
 {
-  "errorClass" : "DESCRIBE_JSON_NOT_EXTENDED",
-  "sqlState" : "0A000"
+  "errorClass" : "FORBIDDEN_OPERATION",
+  "sqlState" : "42809",
+  "messageParameters" : {
+    "objectName" : "`v`",
+    "objectType" : "VIEW",
+    "statement" : "DESC PARTITION"
+  }
 }
 
 
@@ -698,13 +705,13 @@ Execute DescribeTableCommand
 
 
 -- !query
-EXPLAIN DESC t AS JSON
+EXPLAIN DESC EXTENDED t AS JSON
 -- !query schema
 struct<plan:string>
 -- !query output
-Error occurred during query planning: 
-For example: `DESCRIBE EXTENDED TABLE t AS JSON` is supported but `DESCRIBE TABLE t AS JSON` is not. SQLSTATE: 0A000
-[DESCRIBE_JSON_NOT_EXTENDED] DESCRIBE ... AS JSON only supported when [EXTENDED|FORMATTED] is specified.
+== Physical Plan ==
+Execute DescribeTableJsonCommand
+   +- DescribeTableJsonCommand `spark_catalog`.`default`.`t`, true
 
 
 -- !query
@@ -759,13 +766,13 @@ Execute DescribeTableCommand
 
 
 -- !query
-EXPLAIN DESCRIBE t PARTITION (c='Us', d=2) AS JSON
+EXPLAIN DESCRIBE EXTENDED t PARTITION (c='Us', d=2) AS JSON
 -- !query schema
 struct<plan:string>
 -- !query output
-Error occurred during query planning: 
-For example: `DESCRIBE EXTENDED TABLE t AS JSON` is supported but `DESCRIBE TABLE t AS JSON` is not. SQLSTATE: 0A000
-[DESCRIBE_JSON_NOT_EXTENDED] DESCRIBE ... AS JSON only supported when [EXTENDED|FORMATTED] is specified.
+== Physical Plan ==
+Execute DescribeTableJsonCommand
+   +- DescribeTableJsonCommand `spark_catalog`.`default`.`t`, [c=Us, d=2], true
 
 
 -- !query
@@ -819,18 +826,6 @@ b                   	int
 # Column Default Values	                    	                    
 a                   	string              	'default-value'     
 b                   	int                 	42
-
-
--- !query
-DESC d AS JSON
--- !query schema
-struct<>
--- !query output
-org.apache.spark.sql.AnalysisException
-{
-  "errorClass" : "DESCRIBE_JSON_NOT_EXTENDED",
-  "sqlState" : "0A000"
-}
 
 
 -- !query
@@ -938,15 +933,11 @@ b                   	int                 	42
 
 
 -- !query
-DESC e AS JSON
+DESC EXTENDED e AS JSON
 -- !query schema
-struct<>
+struct<json_metadata:string,:string,:string>
 -- !query output
-org.apache.spark.sql.AnalysisException
-{
-  "errorClass" : "DESCRIBE_JSON_NOT_EXTENDED",
-  "sqlState" : "0A000"
-}
+{"table_name":"e","catalog_names":["spark_catalog"],"database_names":["default"],"qualified_name":"spark_catalog.default.e","columns":[{"id":1,"name":"a","type":{"type":"string"},"default_value":"CONCAT('a\n b\n ', 'c\n d')"},{"id":2,"name":"b","type":{"type":"integer"},"default_value":"42"}],"location": "[not included in comparison]/{warehouse_dir}/e","created_time [not included in comparison]":"None","last_access [not included in comparison]":"None","created_by [not included in comparison]":"None","type":"MANAGED","provider":"parquet","comment":"table_comment"}
 
 
 -- !query
@@ -1074,15 +1065,11 @@ d                   	string
 
 
 -- !query
-DESC t2 as json
+DESC FORMATTED t2 as json
 -- !query schema
-struct<>
+struct<json_metadata:string,:string,:string>
 -- !query output
-org.apache.spark.sql.AnalysisException
-{
-  "errorClass" : "DESCRIBE_JSON_NOT_EXTENDED",
-  "sqlState" : "0A000"
-}
+{"table_name":"t2","catalog_names":["spark_catalog"],"database_names":["default"],"qualified_name":"spark_catalog.default.t2","columns":[{"id":1,"name":"a","type":{"type":"string"}},{"id":2,"name":"b","type":{"type":"integer"}},{"id":3,"name":"c","type":{"type":"string"}},{"id":4,"name":"d","type":{"type":"string"}}],"bucket_columns":["a"],"sort_columns":["b"],"location":"file:[not included in comparison]/{warehouse_dir}/t2","storage_properties":{"a":"1","b":"2","password":"*********(redacted)"},"created_time":"2024-12-09T04:10:45.603Z","last_access":"UNKNOWN","created_by":"Spark 4.0.0-SNAPSHOT","type":"MANAGED","provider":"parquet","comment":"table_comment","table_properties":{"password":"*********(redacted)","t":"test"},"partition_provider":"Catalog","partition_columns":["c","d"]}
 
 
 -- !query
@@ -1114,12 +1101,8 @@ struct<>
 
 
 -- !query
-DESC c AS JSON
+DESC FORMATTED c AS JSON
 -- !query schema
-struct<>
+struct<json_metadata:string,:string,:string>
 -- !query output
-org.apache.spark.sql.AnalysisException
-{
-  "errorClass" : "DESCRIBE_JSON_NOT_EXTENDED",
-  "sqlState" : "0A000"
-}
+{"table_name":"c","catalog_names":["spark_catalog"],"database_names":["default"],"qualified_name":"spark_catalog.default.c","columns":[{"id":1,"name":"nested_struct","type":{"type":"struct","fields":[{"name":"name","type":{"type":"string"},"nullable":true},{"name":"age","type":{"type":"integer"},"nullable":true},{"name":"contact","type":{"type":"struct","fields":[{"name":"email","type":{"type":"string"},"nullable":true},{"name":"phone_numbers","type":{"type":"array","elementType":{"type":"string"},"containsNull":true},"nullable":true},{"name":"addresses","type":{"type":"array","elementType":{"type":"struct","fields":[{"name":"street","type":{"type":"string"},"nullable":true},{"name":"city","type":{"type":"string"},"nullable":true},{"name":"zip","type":{"type":"integer"},"nullable":true}]},"containsNull":true},"nullable":true}]},"nullable":true}]}},{"id":2,"name":"preferences","type":{"type":"map","keyType":{"type":"string"},"valueType":{"type":"array","elementType":{"type":"string"},"containsNull":true},"valueContainsNull":true}},{"id":3,"name":"id","type":{"type":"string"}}],"location": "[not included in comparison]/{warehouse_dir}/c","storage_properties":{"option1":"value1","option2":"value2"},"created_time [not included in comparison]":"None","last_access [not included in comparison]":"None","created_by [not included in comparison]":"None","type":"MANAGED","provider":"parquet","comment":"A table with nested complex types","table_properties":{"password":"*********(redacted)","property1":"value1"},"partition_provider":"Catalog","partition_columns":["id"]}

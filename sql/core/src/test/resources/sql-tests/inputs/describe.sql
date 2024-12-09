@@ -21,7 +21,7 @@ ALTER TABLE t ADD PARTITION (c='Us', d=1);
 
 DESCRIBE t;
 
-DESCRIBE t AS JSON;
+DESCRIBE EXTENDED t AS JSON;
 
 DESC default.t;
 
@@ -45,7 +45,7 @@ DESC EXTENDED t;
 
 DESC t PARTITION (c='Us', d=1);
 
-DESC t PARTITION (c='Us', d=1) AS JSON;
+DESC EXTENDED t PARTITION (c='Us', d=1) AS JSON;
 
 DESC EXTENDED t PARTITION (c='Us', d=1);
 
@@ -58,7 +58,7 @@ DESC EXTENDED t PARTITION (C='Us', D=1) AS JSON;
 -- NoSuchPartitionException: Partition not found in table
 DESC t PARTITION (c='Us', d=2);
 
-DESC t PARTITION (c='Us', d=2) AS JSON;
+DESC EXTENDED t PARTITION (c='Us', d=2) AS JSON;
 
 -- AnalysisException: Partition spec is invalid
 DESC t PARTITION (c='Us');
@@ -70,11 +70,11 @@ DESC t PARTITION (c='Us', d);
 
 DESC temp_v;
 
-DESC temp_v AS JSON;
+DESC EXTENDED temp_v AS JSON;
 
 DESC TABLE temp_v;
 
-DESC TABLE temp_v AS JSON;
+DESC EXTENDED TABLE temp_v AS JSON;
 
 DESC FORMATTED temp_v;
 
@@ -100,16 +100,16 @@ DESC EXTENDED v;
 -- AnalysisException DESC PARTITION is not allowed on a view
 DESC v PARTITION (c='Us', d=1);
 
-DESC v PARTITION (c='Us', d=1) AS JSON;
+DESC EXTENDED v PARTITION (c='Us', d=1) AS JSON;
 
 -- Explain Describe Table
 EXPLAIN DESC t;
-EXPLAIN DESC t AS JSON;
+EXPLAIN DESC EXTENDED t AS JSON;
 EXPLAIN DESC EXTENDED t;
 EXPLAIN EXTENDED DESC t;
 EXPLAIN DESCRIBE t b;
 EXPLAIN DESCRIBE t PARTITION (c='Us', d=2);
-EXPLAIN DESCRIBE t PARTITION (c='Us', d=2) AS JSON;
+EXPLAIN DESCRIBE EXTENDED t PARTITION (c='Us', d=2) AS JSON;
 
 -- DROP TEST TABLES/VIEWS
 DROP TABLE t;
@@ -125,8 +125,6 @@ CREATE TABLE d (a STRING DEFAULT 'default-value', b INT DEFAULT 42) USING parque
 
 DESC d;
 
-DESC d AS JSON;
-
 DESC EXTENDED d;
 
 DESC TABLE EXTENDED d;
@@ -140,7 +138,7 @@ CREATE TABLE e (a STRING DEFAULT CONCAT('a\n b\n ', 'c\n d'), b INT DEFAULT 42) 
 
 DESC e;
 
-DESC e AS JSON;
+DESC EXTENDED e AS JSON;
 
 DESC EXTENDED e;
 
@@ -173,7 +171,7 @@ TBLPROPERTIES (
 
 DESC t2;
 
-DESC t2 as json;
+DESC FORMATTED t2 as json;
 
 CREATE TABLE c (
   id STRING,
@@ -198,4 +196,4 @@ CREATE TABLE c (
   TBLPROPERTIES ('property1' = 'value1', 'password' = 'password');
 
 
-DESC c AS JSON;
+DESC FORMATTED c AS JSON;

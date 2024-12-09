@@ -354,10 +354,6 @@ executeImmediateArgumentSeq
     : executeImmediateArgument (COMMA executeImmediateArgument)*
     ;
 
-asJsonOption
-    : AS JSON
-    ;
-
 timezone
     : stringLit
     | LOCAL
