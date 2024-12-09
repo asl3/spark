@@ -53,49 +53,53 @@ AlterTableAddPartitionCommand `spark_catalog`.`default`.`t`, [(Map(c -> Us, d ->
 -- !query
 DESCRIBE t
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`default`.`t`, false, false, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`default`.`t`, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
 DESCRIBE t AS JSON
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`default`.`t`, false, true, [col_name#x, data_type#x, comment#x]
+org.apache.spark.sql.AnalysisException
+{
+  "errorClass" : "DESCRIBE_JSON_NOT_EXTENDED",
+  "sqlState" : "0A000"
+}
 
 
 -- !query
 DESC default.t
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`default`.`t`, false, false, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`default`.`t`, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
 DESC TABLE t
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`default`.`t`, false, false, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`default`.`t`, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
 DESC FORMATTED t
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`default`.`t`, true, false, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`default`.`t`, true, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
 DESC FORMATTED t AS JSON
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`default`.`t`, true, true, [col_name#x, data_type#x, comment#x]
+DescribeTableJsonCommand `spark_catalog`.`default`.`t`, true
 
 
 -- !query
 DESC EXTENDED t
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`default`.`t`, true, false, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`default`.`t`, true, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
 DESC EXTENDED t AS JSON
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`default`.`t`, true, true, [col_name#x, data_type#x, comment#x]
+DescribeTableJsonCommand `spark_catalog`.`default`.`t`, true
 
 
 -- !query
@@ -107,7 +111,7 @@ AlterTableUnsetPropertiesCommand `spark_catalog`.`default`.`t`, [e], false, fals
 -- !query
 DESC EXTENDED t
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`default`.`t`, true, false, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`default`.`t`, true, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
@@ -119,43 +123,47 @@ AlterTableUnsetPropertiesCommand `spark_catalog`.`default`.`t`, [comment], false
 -- !query
 DESC EXTENDED t
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`default`.`t`, true, false, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`default`.`t`, true, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
 DESC t PARTITION (c='Us', d=1)
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`default`.`t`, [c=Us, d=1], false, false, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`default`.`t`, [c=Us, d=1], false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
 DESC t PARTITION (c='Us', d=1) AS JSON
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`default`.`t`, [c=Us, d=1], false, true, [col_name#x, data_type#x, comment#x]
+org.apache.spark.sql.AnalysisException
+{
+  "errorClass" : "DESCRIBE_JSON_NOT_EXTENDED",
+  "sqlState" : "0A000"
+}
 
 
 -- !query
 DESC EXTENDED t PARTITION (c='Us', d=1)
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`default`.`t`, [c=Us, d=1], true, false, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`default`.`t`, [c=Us, d=1], true, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
 DESC FORMATTED t PARTITION (c='Us', d=1)
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`default`.`t`, [c=Us, d=1], true, false, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`default`.`t`, [c=Us, d=1], true, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
 DESC EXTENDED t PARTITION (C='Us', D=1)
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`default`.`t`, [C=Us, D=1], true, false, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`default`.`t`, [C=Us, D=1], true, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
 DESC EXTENDED t PARTITION (C='Us', D=1) AS JSON
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`default`.`t`, [C=Us, D=1], true, true, [col_name#x, data_type#x, comment#x]
+DescribeTableJsonCommand `spark_catalog`.`default`.`t`, [C=Us, D=1], true
 
 
 -- !query
@@ -175,14 +183,10 @@ org.apache.spark.sql.catalyst.analysis.NoSuchPartitionException
 -- !query
 DESC t PARTITION (c='Us', d=2) AS JSON
 -- !query analysis
-org.apache.spark.sql.catalyst.analysis.NoSuchPartitionException
+org.apache.spark.sql.AnalysisException
 {
-  "errorClass" : "PARTITIONS_NOT_FOUND",
-  "sqlState" : "428FT",
-  "messageParameters" : {
-    "partitionList" : "PARTITION (`c` = Us, `d` = 2)",
-    "tableName" : "`default`.`t`"
-  }
+  "errorClass" : "DESCRIBE_JSON_NOT_EXTENDED",
+  "sqlState" : "0A000"
 }
 
 
@@ -223,43 +227,51 @@ org.apache.spark.sql.catalyst.parser.ParseException
 -- !query
 DESC temp_v
 -- !query analysis
-DescribeTableCommand `temp_v`, false, false, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `temp_v`, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
 DESC temp_v AS JSON
 -- !query analysis
-DescribeTableCommand `temp_v`, false, true, [col_name#x, data_type#x, comment#x]
+org.apache.spark.sql.AnalysisException
+{
+  "errorClass" : "DESCRIBE_JSON_NOT_EXTENDED",
+  "sqlState" : "0A000"
+}
 
 
 -- !query
 DESC TABLE temp_v
 -- !query analysis
-DescribeTableCommand `temp_v`, false, false, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `temp_v`, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
 DESC TABLE temp_v AS JSON
 -- !query analysis
-DescribeTableCommand `temp_v`, false, true, [col_name#x, data_type#x, comment#x]
+org.apache.spark.sql.AnalysisException
+{
+  "errorClass" : "DESCRIBE_JSON_NOT_EXTENDED",
+  "sqlState" : "0A000"
+}
 
 
 -- !query
 DESC FORMATTED temp_v
 -- !query analysis
-DescribeTableCommand `temp_v`, true, false, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `temp_v`, true, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
 DESC EXTENDED temp_v
 -- !query analysis
-DescribeTableCommand `temp_v`, true, false, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `temp_v`, true, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
 DESC temp_Data_Source_View
 -- !query analysis
-DescribeTableCommand `temp_Data_Source_View`, false, false, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `temp_Data_Source_View`, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
@@ -280,31 +292,31 @@ org.apache.spark.sql.AnalysisException
 -- !query
 DESC v
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`default`.`v`, false, false, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`default`.`v`, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
 DESC TABLE v
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`default`.`v`, false, false, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`default`.`v`, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
 DESC FORMATTED v
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`default`.`v`, true, false, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`default`.`v`, true, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
 DESC FORMATTED v AS JSON
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`default`.`v`, true, true, [col_name#x, data_type#x, comment#x]
+DescribeTableJsonCommand `spark_catalog`.`default`.`v`, true
 
 
 -- !query
 DESC EXTENDED v
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`default`.`v`, true, false, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`default`.`v`, true, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
@@ -327,13 +339,8 @@ DESC v PARTITION (c='Us', d=1) AS JSON
 -- !query analysis
 org.apache.spark.sql.AnalysisException
 {
-  "errorClass" : "FORBIDDEN_OPERATION",
-  "sqlState" : "42809",
-  "messageParameters" : {
-    "objectName" : "`v`",
-    "objectType" : "VIEW",
-    "statement" : "DESC PARTITION"
-  }
+  "errorClass" : "DESCRIBE_JSON_NOT_EXTENDED",
+  "sqlState" : "0A000"
 }
 
 
@@ -420,37 +427,41 @@ org.apache.spark.sql.catalyst.analysis.TableAlreadyExistsException
 -- !query
 DESC d
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`default`.`d`, false, false, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`default`.`d`, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
 DESC d AS JSON
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`default`.`d`, false, true, [col_name#x, data_type#x, comment#x]
+org.apache.spark.sql.AnalysisException
+{
+  "errorClass" : "DESCRIBE_JSON_NOT_EXTENDED",
+  "sqlState" : "0A000"
+}
 
 
 -- !query
 DESC EXTENDED d
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`default`.`d`, true, false, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`default`.`d`, true, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
 DESC TABLE EXTENDED d
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`default`.`d`, true, false, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`default`.`d`, true, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
 DESC TABLE EXTENDED d AS JSON
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`default`.`d`, true, true, [col_name#x, data_type#x, comment#x]
+DescribeTableJsonCommand `spark_catalog`.`default`.`d`, true
 
 
 -- !query
 DESC FORMATTED d
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`default`.`d`, true, false, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`default`.`d`, true, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
@@ -469,37 +480,41 @@ org.apache.spark.sql.catalyst.analysis.TableAlreadyExistsException
 -- !query
 DESC e
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`default`.`e`, false, false, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`default`.`e`, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
 DESC e AS JSON
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`default`.`e`, false, true, [col_name#x, data_type#x, comment#x]
+org.apache.spark.sql.AnalysisException
+{
+  "errorClass" : "DESCRIBE_JSON_NOT_EXTENDED",
+  "sqlState" : "0A000"
+}
 
 
 -- !query
 DESC EXTENDED e
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`default`.`e`, true, false, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`default`.`e`, true, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
 DESC TABLE EXTENDED e
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`default`.`e`, true, false, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`default`.`e`, true, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
 DESC FORMATTED e
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`default`.`e`, true, false, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`default`.`e`, true, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
 DESC TABLE FORMATTED e AS JSON
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`default`.`e`, true, true, [col_name#x, data_type#x, comment#x]
+DescribeTableJsonCommand `spark_catalog`.`default`.`e`, true
 
 
 -- !query
@@ -536,13 +551,17 @@ org.apache.spark.sql.catalyst.analysis.TableAlreadyExistsException
 -- !query
 DESC t2
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`default`.`t2`, false, false, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`default`.`t2`, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
 DESC t2 as json
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`default`.`t2`, false, true, [col_name#x, data_type#x, comment#x]
+org.apache.spark.sql.AnalysisException
+{
+  "errorClass" : "DESCRIBE_JSON_NOT_EXTENDED",
+  "sqlState" : "0A000"
+}
 
 
 -- !query
@@ -581,4 +600,8 @@ org.apache.spark.sql.catalyst.analysis.TableAlreadyExistsException
 -- !query
 DESC c AS JSON
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`default`.`c`, false, true, [col_name#x, data_type#x, comment#x]
+org.apache.spark.sql.AnalysisException
+{
+  "errorClass" : "DESCRIBE_JSON_NOT_EXTENDED",
+  "sqlState" : "0A000"
+}

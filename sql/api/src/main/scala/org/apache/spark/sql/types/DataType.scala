@@ -72,21 +72,19 @@ abstract class DataType extends AbstractDataType {
   /** The pretty (i.e. indented) JSON representation of this data type. */
   def prettyJson: String = pretty(render(jsonValue))
 
-  /** Util to recursively form JSON representation of data type, used for DESCRIBE AS JSON */
+  /** Util to recursively form JSON representation of data type, used for DESCRIBE AS JSON.
+   * Differs from `json` by adding additional fields for complex types. */
   def jsonType: String = {
     this match {
       case arrayType: ArrayType =>
         val elementTypeJson = arrayType.elementType.jsonType
-        s"""{"type": "array",
-           |"elementType": $elementTypeJson,
+        s"""{"type": "array","elementType": $elementTypeJson,
            |"containsNull": ${arrayType.containsNull}}""".stripMargin
 
       case mapType: MapType =>
         val keyTypeJson = mapType.keyType.jsonType
         val valueTypeJson = mapType.valueType.jsonType
-        s"""{"type": "map",
-           |"keyType": $keyTypeJson,
-           |"valueType": $valueTypeJson,
+        s"""{"type": "map","keyType": $keyTypeJson,"valueType": $valueTypeJson,
            |"valueContainsNull": ${mapType.valueContainsNull}}""".stripMargin
 
       case structType: StructType =>
