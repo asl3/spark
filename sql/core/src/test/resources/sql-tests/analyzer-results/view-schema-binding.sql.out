@@ -36,7 +36,7 @@ Project [c1#x]
 -- !query
 DESCRIBE EXTENDED v
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`default`.`v`, true, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`default`.`v`, true, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
@@ -71,7 +71,7 @@ org.apache.spark.sql.AnalysisException
 -- !query
 DESCRIBE EXTENDED v
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`default`.`v`, true, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`default`.`v`, true, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
@@ -111,7 +111,7 @@ Project [c1#x, c2#x]
 -- !query
 DESCRIBE EXTENDED v
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`default`.`v`, true, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`default`.`v`, true, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
@@ -147,7 +147,7 @@ org.apache.spark.sql.AnalysisException
 -- !query
 DESCRIBE EXTENDED v
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`default`.`v`, true, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`default`.`v`, true, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
@@ -193,7 +193,7 @@ Project [c1#x]
 -- !query
 DESCRIBE EXTENDED v
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`default`.`v`, true, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`default`.`v`, true, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
@@ -205,7 +205,7 @@ AlterViewSchemaBindingCommand `spark_catalog`.`default`.`v`, BINDING
 -- !query
 DESCRIBE EXTENDED v
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`default`.`v`, true, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`default`.`v`, true, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
@@ -240,7 +240,7 @@ org.apache.spark.sql.AnalysisException
 -- !query
 DESCRIBE EXTENDED v
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`default`.`v`, true, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`default`.`v`, true, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
