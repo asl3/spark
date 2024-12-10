@@ -196,3 +196,27 @@ CREATE TABLE c (
 
 
 DESC FORMATTED c AS JSON;
+
+-- from Spark 4.0 docs example
+CREATE TABLE customer(
+        cust_id INT,
+        state VARCHAR(20),
+        name STRING COMMENT "Short name"
+    )
+    USING parquet
+    PARTITIONED BY (state);
+
+INSERT INTO customer PARTITION (state = "AR") VALUES (100, "Mike");
+
+DESC FORMATTED customer;
+
+DESC FORMATTED customer AS JSON;
+
+ANALYZE TABLE customer COMPUTE STATISTICS FOR COLUMNS cust_id;
+
+-- describe columns
+DESCRIBE FORMATTED customer customer.cust_id;
+
+DESCRIBE FORMATTED customer customer.cust_id AS JSON;
+
+

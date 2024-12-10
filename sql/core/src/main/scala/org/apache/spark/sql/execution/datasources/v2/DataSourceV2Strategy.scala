@@ -348,6 +348,9 @@ class DataSourceV2Strategy(session: SparkSession) extends Strategy with Predicat
       if (partitionSpec.nonEmpty) {
         throw QueryCompilationErrors.describeDoesNotSupportPartitionForV2TablesError()
       }
+      if (asJson) {
+        throw QueryCompilationErrors.describeAsJsonNotSupportedForV2TablesError()
+      }
       DescribeTableExec(output, r.table, isExtended) :: Nil
 
     case DescribeColumn(r: ResolvedTable, column, isExtended, asJson, output) =>

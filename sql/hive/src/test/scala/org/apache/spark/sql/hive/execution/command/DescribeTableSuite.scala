@@ -125,18 +125,18 @@ class DescribeTableSuite extends v1.DescribeTableSuiteBase with CommandSuiteBase
       val descriptionDf = spark.sql(s"DESCRIBE EXTENDED $t AS JSON")
       val firstRow = descriptionDf.select("json_metadata").head()
       val jsonValue = firstRow.getString(0)
-      val parsedOutput = parse(jsonValue).extract[DescribeTableOutput]
+      val parsedOutput = parse(jsonValue).extract[DescribeTableJson]
 
-      val expectedOutput = DescribeTableOutput(
+      val expectedOutput = DescribeTableJson(
         table_name = Some("table"),
         catalog_names = Some(List(SESSION_CATALOG_NAME)),
         database_names = Some(List("ns")),
         qualified_name = Some(s"spark_catalog.ns.table"),
         columns = Some(List(
-          Column(1, "a", Type("string")),
-          Column(2, "b", Type("integer")),
-          Column(3, "c", Type("string")),
-          Column(4, "d", Type("string"))
+          TableColumn(1, "a", Type("string")),
+          TableColumn(2, "b", Type("integer")),
+          TableColumn(3, "c", Type("string")),
+          TableColumn(4, "d", Type("string"))
         )),
         owner = Some(""),
         created_time = Some(""),
@@ -187,18 +187,18 @@ class DescribeTableSuite extends v1.DescribeTableSuiteBase with CommandSuiteBase
       val firstRow = descriptionDf.select("json_metadata").head()
       val jsonValue = firstRow.getString(0)
       print("\n **** jsonValue: " + jsonValue + "\n")
-      val parsedOutput = parse(jsonValue).extract[DescribeTableOutput]
+      val parsedOutput = parse(jsonValue).extract[DescribeTableJson]
 
-      val expectedOutput = DescribeTableOutput(
+      val expectedOutput = DescribeTableJson(
         table_name = Some("table"),
         catalog_names = Some(List("spark_catalog")),
         database_names = Some(List("ns")),
         qualified_name = Some("spark_catalog.ns.table"),
         columns = Some(List(
-          Column(1, "a", Type("string")),
-          Column(2, "b", Type("integer")),
-          Column(3, "c", Type("string")),
-          Column(4, "d", Type("string"))
+          TableColumn(1, "a", Type("string")),
+          TableColumn(2, "b", Type("integer")),
+          TableColumn(3, "c", Type("string")),
+          TableColumn(4, "d", Type("string"))
         )),
         last_access = Some("UNKNOWN"),
         created_by = Some("Spark 4.0.0-SNAPSHOT"),
@@ -246,16 +246,16 @@ class DescribeTableSuite extends v1.DescribeTableSuiteBase with CommandSuiteBase
       val descriptionDf = spark.sql(s"DESC EXTENDED d AS JSON")
       val firstRow = descriptionDf.select("json_metadata").head()
       val jsonValue = firstRow.getString(0)
-      val parsedOutput = parse(jsonValue).extract[DescribeTableOutput]
+      val parsedOutput = parse(jsonValue).extract[DescribeTableJson]
 
-      val expectedOutput = DescribeTableOutput(
+      val expectedOutput = DescribeTableJson(
         table_name = Some("d"),
         catalog_names = Some(List("spark_catalog")),
         database_names = Some(List("default")),
         qualified_name = Some("spark_catalog.default.d"),
         columns = Some(List(
-          Column(1, "a", Type("string"), default_value = Some("'default-value'")),
-          Column(2, "b", Type("integer"), default_value = Some("42"))
+          TableColumn(1, "a", Type("string"), default_value = Some("'default-value'")),
+          TableColumn(2, "b", Type("integer"), default_value = Some("42"))
         )),
         last_access = Some("UNKNOWN"),
         created_by = Some("Spark 4.0.0-SNAPSHOT"),
@@ -292,14 +292,46 @@ class DescribeTableSuite extends v1.DescribeTableSuiteBase with CommandSuiteBase
       val descriptionDf = spark.sql(s"DESCRIBE EXTENDED temp_v AS JSON")
       val firstRow = descriptionDf.select("json_metadata").head()
       val jsonValue = firstRow.getString(0)
-      val parsedOutput = parse(jsonValue).extract[DescribeTableOutput]
+      val parsedOutput = parse(jsonValue).extract[DescribeTableJson]
 
-      val expectedOutput = DescribeTableOutput(
+      val expectedOutput = DescribeTableJson(
         columns = Some(List(
-          Column(1, "a", Type("string")),
-          Column(2, "b", Type("integer")),
-          Column(3, "c", Type("string")),
-          Column(4, "d", Type("string"))
+          TableColumn(1, "a", Type("string")),
+          TableColumn(2, "b", Type("integer")),
+          TableColumn(3, "c", Type("string")),
+          TableColumn(4, "d", Type("string"))
+        ))
+      )
+
+      assert(expectedOutput == parsedOutput)
+    }
+  }
+
+  test("DESCRIBE AS JSON customers docs example") {
+    withNamespaceAndTable("ns", "table") { t =>
+      val tableCreationStr =
+        """
+          |CREATE TABLE customer(
+          |        cust_id INT,
+          |        state VARCHAR(20),
+          |        name STRING COMMENT "Short name"
+          |    )
+          |    USING parquet
+          |    PARTITIONED BY (state)
+          |""".stripMargin
+      spark.sql(tableCreationStr)
+      spark.sql("INSERT INTO customer PARTITION (state = \"AR\") VALUES (100, \"Mike\")")
+      val descriptionDf = spark.sql(s"DESCRIBE FORMATTED customer customer.name AS JSON")
+      val firstRow = descriptionDf.select("json_metadata").head()
+      val jsonValue = firstRow.getString(0)
+      val parsedOutput = parse(jsonValue).extract[DescribeTableJson]
+
+      val expectedOutput = DescribeTableJson(
+        columns = Some(List(
+          TableColumn(1, "a", Type("string")),
+          TableColumn(2, "b", Type("integer")),
+          TableColumn(3, "c", Type("string")),
+          TableColumn(4, "d", Type("string"))
         ))
       )
 
@@ -337,15 +369,15 @@ class DescribeTableSuite extends v1.DescribeTableSuiteBase with CommandSuiteBase
       val descriptionDf = spark.sql(s"DESCRIBE EXTENDED c AS JSON")
       val firstRow = descriptionDf.select("json_metadata").head()
       val jsonValue = firstRow.getString(0)
-      val parsedOutput = parse(jsonValue).extract[DescribeTableOutput]
+      val parsedOutput = parse(jsonValue).extract[DescribeTableJson]
 
-      val expectedOutput = DescribeTableOutput(
+      val expectedOutput = DescribeTableJson(
         table_name = Some("c"),
         catalog_names = Some(List("spark_catalog")),
         database_names = Some(List("default")),
         qualified_name = Some("spark_catalog.default.c"),
         columns = Some(List(
-          Column(
+          TableColumn(
             id = 1,
             name = "nested_struct",
             `type` = Type(
@@ -416,7 +448,7 @@ class DescribeTableSuite extends v1.DescribeTableSuiteBase with CommandSuiteBase
             ),
             default_value = None
           ),
-          Column(
+          TableColumn(
             id = 2,
             name = "preferences",
             `type` = Type(
@@ -431,7 +463,7 @@ class DescribeTableSuite extends v1.DescribeTableSuiteBase with CommandSuiteBase
             ),
             default_value = None
           ),
-          Column(
+          TableColumn(
             id = 3,
             name = "id",
             `type` = Type("string"),
@@ -464,12 +496,13 @@ class DescribeTableSuite extends v1.DescribeTableSuiteBase with CommandSuiteBase
   }
 }
 
-case class DescribeTableOutput(
+/** Represents JSON output of DESCRIBE TABLE AS JSON  */
+case class DescribeTableJson(
   table_name: Option[String] = None,
   catalog_names: Option[List[String]] = Some(Nil),
   database_names: Option[List[String]] = Some(Nil),
   qualified_name: Option[String] = None,
-  columns: Option[List[Column]] = Some(Nil),
+  columns: Option[List[TableColumn]] = Some(Nil),
   owner: Option[String] = None,
   created_time: Option[String] = None,
   last_access: Option[String] = None,
@@ -490,7 +523,8 @@ case class DescribeTableOutput(
   partition_values: Option[Map[String, String]] = None
 )
 
-case class Column(
+/** Used for columns field of DescribeTableJson */
+case class TableColumn(
  id: Int,
  name: String,
  `type`: Type,
@@ -512,4 +546,12 @@ case class Field(
   name: String,
   `type`: Type,
   nullable: Option[Boolean] = None
+)
+
+/** Represents JSON output of DESCRIBE TABLE <col_name> AS JSON  */
+case class ColumnJson(
+  id: Int,
+  name: String,
+  `type`: Type,
+  default_value: Option[String] = None
 )
