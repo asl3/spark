@@ -323,7 +323,7 @@ Project [c1#x]
 -- !query
 DESCRIBE IDENTIFIER('ta' || 'b')
 -- !query analysis
-DescribeTableCommand `spark_catalog`.`default`.`tab`, false, [col_name#x, data_type#x, comment#x]
+DescribeTableCommand `spark_catalog`.`default`.`tab`, false, false, [col_name#x, data_type#x, comment#x]
 
 
 -- !query
