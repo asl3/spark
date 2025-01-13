@@ -773,7 +773,7 @@ case class DescribeTableJsonCommand(
         throw QueryCompilationErrors.descPartitionNotAllowedOnTempView(table.identifier)
       }
       val schema = catalog.getTempViewOrPermanentTableMetadata(table).schema
-      describeColsJson(schema, jsonMap, header = false)
+      describeColsJson(schema, jsonMap)
     } else {
       val metadata = catalog.getTableRawMetadata(table)
       val schema = if (metadata.schema.isEmpty) {
@@ -791,7 +791,7 @@ case class DescribeTableJsonCommand(
         addKeyValueToMap("schema_name", JString(db), jsonMap)
       }
 
-      describeColsJson(schema, jsonMap, header = false)
+      describeColsJson(schema, jsonMap)
       describeClusteringInfoJson(metadata, jsonMap)
 
       if (partitionSpec.nonEmpty) {
@@ -913,8 +913,7 @@ case class DescribeTableJsonCommand(
 
   private def describeColsJson(
       schema: StructType,
-      jsonMap: mutable.LinkedHashMap[String, JValue],
-      header: Boolean): Unit = {
+      jsonMap: mutable.LinkedHashMap[String, JValue]): Unit = {
     val columnsJson = jsonType(StructType(schema.fields))
       .asInstanceOf[JObject].find(_.isInstanceOf[JArray]).get
     addKeyValueToMap("columns", columnsJson, jsonMap)
