@@ -130,6 +130,8 @@ def _create_py_udf(
     else:
         is_arrow_enabled = useArrow
 
+    print("\n\n *** Arrow optimization is enabled: ", is_arrow_enabled)
+
     if is_arrow_enabled:
         try:
             require_minimum_pandas_version()

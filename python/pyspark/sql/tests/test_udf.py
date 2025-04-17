@@ -95,19 +95,27 @@ class BaseUDFTestsMixin(object):
         self.assertEqual(row[0], 4)
 
     def test_udf2(self):
+        self.spark.conf.set("spark.sql.execution.pythonUDF.arrow.enabled", "true")
+        @udf("int")
+        def test_udf(a, b):
+            return a + b
         with self.tempView("test"):
+            print("\n *** begin test_udf2")
             self.spark.catalog.registerFunction("strlen", lambda string: len(string), IntegerType())
             self.spark.createDataFrame([("test",)], ["a"]).createOrReplaceTempView("test")
             [res] = self.spark.sql("SELECT strlen(a) FROM test WHERE strlen(a) > 1").collect()
             self.assertEqual(4, res[0])
+            print("\n added a new test")
+            self.spark.sql("SELECT test_udf(id, b => id * 10) FROM range(2)")
+            self.assertTrue(False)
 
     def test_udf3(self):
-        two_args = self.spark.catalog.registerFunction(
-            "twoArgs", UserDefinedFunction(lambda x, y: len(x) + y)
-        )
-        self.assertEqual(two_args.deterministic, True)
-        [row] = self.spark.sql("SELECT twoArgs('test', 1)").collect()
-        self.assertEqual(row[0], "5")
+            two_args = self.spark.catalog.registerFunction(
+                "twoArgs", UserDefinedFunction(lambda x, y: len(x) + y)
+            )
+            self.assertEqual(two_args.deterministic, True)
+            [row] = self.spark.sql("SELECT twoArgs('test', 1)").collect()
+            self.assertEqual(row[0], "5")
 
     def test_udf_registration_return_type_none(self):
         two_args = self.spark.catalog.registerFunction(
@@ -1079,6 +1087,7 @@ class BaseUDFTestsMixin(object):
         ):
             with self.subTest(query_no=i):
                 assertDataFrameEqual(df, [Row(0), Row(101)])
+        self.assertTrue(False)
 
     def test_named_arguments_negative(self):
         @udf("int")
@@ -1374,7 +1383,7 @@ class UDFTests(BaseUDFTestsMixin, ReusedSQLTestCase):
     @classmethod
     def setUpClass(cls):
         super(BaseUDFTestsMixin, cls).setUpClass()
-        cls.spark.conf.set("spark.sql.execution.pythonUDF.arrow.enabled", "false")
+        cls.spark.conf.set("spark.sql.execution.pythonUDF.arrow.enabled", "true")
 
     # We cannot check whether the batch size is effective or not. We just run the query with
     # various batch size and see whether the query runs successfully, and the output is
@@ -1427,6 +1436,7 @@ class UDFInitializationTests(unittest.TestCase):
             SparkSession._instantiatedSession,
             "SparkSession shouldn't be initialized when UserDefinedFunction is created.",
         )
+        assert(False)
 
     def test_err_parse_type_when_no_sc(self):
         with self.assertRaisesRegex(

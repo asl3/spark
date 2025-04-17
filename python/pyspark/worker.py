@@ -1513,6 +1513,9 @@ def read_udtf(pickleSer, infile, eval_type):
 
 
 def read_udfs(pickleSer, infile, eval_type):
+    print("\n *** enter read_udfs *** \n")
+    print("\n *** test123 *** \n")
+    print("\n *** eval_type: {} *** \n".format(eval_type))
     runner_conf = {}
 
     state_server_port = None
