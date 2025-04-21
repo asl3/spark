@@ -51,6 +51,7 @@ from pyspark.serializers import (
 )
 from pyspark.sql.functions import SkipRestOfInputTableException
 from pyspark.sql.pandas.serializers import (
+    ArrowStreamSerializer,
     ArrowStreamPandasUDFSerializer,
     ArrowStreamPandasUDTFSerializer,
     CogroupArrowUDFSerializer,
@@ -157,6 +158,101 @@ def wrap_scalar_pandas_udf(f, args_offsets, kwargs_offsets, return_type, runner_
     )
 
 
+def wrap_arrow_batch_udf(f, args_offsets, kwargs_offsets, return_type, runner_conf):
+    import pyarrow as pa
+
+    func, args_kwargs_offsets = wrap_kwargs_support(f, args_offsets, kwargs_offsets)
+    zero_arg_exec = len(args_kwargs_offsets) == 0
+
+    if zero_arg_exec:
+        args_kwargs_offsets = (0,)  # Ensure we have a dummy offset for empty input
+
+    prefers_large = use_large_var_types(runner_conf)
+    arrow_return_type = to_arrow_type(return_type, prefers_large_types=prefers_large)
+
+    # Type coercion for special types like string and binary
+    def result_func(v):
+        if isinstance(return_type, StringType):
+            return str(v) if v is not None else v
+        elif isinstance(return_type, BinaryType):
+            return bytes(v) if v is not None else v
+        return v
+
+    def get_args(*record_batches: pa.RecordBatch):
+        if zero_arg_exec:
+            return [()] * record_batches[0].num_rows
+        rows = []
+        for i in range(record_batches[0].num_rows):
+            row = tuple(
+                record_batches[0].column(offset)[i].as_py()
+                for offset in args_kwargs_offsets
+            )
+            rows.append(row)
+        return rows
+
+    def convert_to_arrow(data):
+        from pyspark.sql.pandas.serializers import LocalDataToArrowConversion
+
+        try:
+            data = [result_func(r) for r in data]
+            # If result is empty, generate empty RecordBatch with proper schema
+            if len(data) == 0:
+                return [
+                    pa.RecordBatch.from_pylist(
+                        data, schema=pa.schema([("result", arrow_return_type)])
+                    )
+                ]
+            else:
+                # Wrap results as a dict so it can be converted into Arrow
+                rows = [{"result": r} for r in data]
+                return LocalDataToArrowConversion.convert(
+                    rows,
+                    StructType([StructField("result", return_type)]),
+                    prefers_large_var_types=prefers_large
+                ).to_batches()
+        except Exception as e:
+            raise PySparkRuntimeError(
+                errorClass="UDTF_ARROW_TYPE_CONVERSION_ERROR",
+                messageParameters={
+                    "data": str(data),
+                    "schema": return_type.simpleString(),
+                    "arrow_schema": str(arrow_return_type),
+                },
+            ) from e
+
+    if "spark.sql.execution.pythonUDF.arrow.concurrency.level" in runner_conf:
+        from concurrent.futures import ThreadPoolExecutor
+        concurrency = int(runner_conf["spark.sql.execution.pythonUDF.arrow.concurrency.level"])
+
+        @fail_on_stopiteration
+        def evaluate(*record_batches: pa.RecordBatch):
+            with ThreadPoolExecutor(max_workers=concurrency) as pool:
+                results = list(pool.map(lambda row: func(*row), get_args(*record_batches)))
+            return convert_to_arrow(results)[0]  # Single RecordBatch
+    else:
+        @fail_on_stopiteration
+        def evaluate(*record_batches: pa.RecordBatch):
+            results = [func(*row) for row in get_args(*record_batches)]
+            return convert_to_arrow(results)[0]
+
+    def verify_result_length(result, length):
+        if result.num_rows != length:
+            raise PySparkRuntimeError(
+                errorClass="SCHEMA_MISMATCH_FOR_PANDAS_UDF",
+                messageParameters={
+                    "udf_type": "arrow_batch_udf",
+                    "expected": str(length),
+                    "actual": str(result.num_rows),
+                },
+            )
+        return result
+
+    return (
+        args_kwargs_offsets,
+        lambda *a: (verify_result_length(evaluate(*a), a[0].num_rows), arrow_return_type, return_type),
+    )
+
+
 # def wrap_arrow_batch_udf(f, args_offsets, kwargs_offsets, return_type, runner_conf):
 #     print("\n ***  wrap_arrow_batch_udf  *** \n")
 #     print("\n ***  return_type  *** \n" + str(return_type))
@@ -229,91 +325,88 @@ def wrap_scalar_pandas_udf(f, args_offsets, kwargs_offsets, return_type, runner_
 #         lambda *a: (verify_result_length(evaluate(*a), len(a[0])), arrow_return_type, return_type),
 #     )
 
-def wrap_arrow_batch_udf(f, args_offsets, kwargs_offsets, return_type, runner_conf):
-    print("\n ***  wrap_arrow_batch_udf  *** \n")
-    print("\n ***  return_type  *** \n" + str(return_type))
-    print("\n ***  function name  *** \n" + str(getattr(f, '__name__', 'unknown')))
-    print("\n ***  function qualname  *** \n" + str(getattr(f, '__qualname__', 'unknown')))
-    print("\n ***  function module  *** \n" + str(getattr(f, '__module__', 'unknown')))
-    print("\n ***  function code  *** \n" + str(getattr(f, '__code__', 'unknown')))
-    import pyarrow as pa
+# def wrap_arrow_batch_udf(f, args_offsets, kwargs_offsets, return_type, runner_conf):
+#     print("\n ***  wrap_arrow_batch_udf  *** \n")
+#     print("\n ***  return_type  *** \n" + str(return_type))
+#     print("\n ***  function name  *** \n" + str(getattr(f, '__name__', 'unknown')))
+#     print("\n ***  function qualname  *** \n" + str(getattr(f, '__qualname__', 'unknown')))
+#     print("\n ***  function module  *** \n" + str(getattr(f, '__module__', 'unknown')))
+#     print("\n ***  function code  *** \n" + str(getattr(f, '__code__', 'unknown')))
+#     import pyarrow as pa
     
-    func, args_kwargs_offsets = wrap_kwargs_support(f, args_offsets, kwargs_offsets)
-    zero_arg_exec = False
-    if len(args_kwargs_offsets) == 0:
-        args_kwargs_offsets = (0,)  # Empty RecordBatch is used for 0-arg execution
-        zero_arg_exec = True
+#     func, args_kwargs_offsets = wrap_kwargs_support(f, args_offsets, kwargs_offsets)
+#     zero_arg_exec = False
+#     if len(args_kwargs_offsets) == 0:
+#         args_kwargs_offsets = (0,)  # Empty RecordBatch is used for 0-arg execution
+#         zero_arg_exec = True
 
-    arrow_return_type = to_arrow_type(
-        return_type, prefers_large_types=use_large_var_types(runner_conf)
-    )
+#     arrow_return_type = to_arrow_type(
+#         return_type, prefers_large_types=use_large_var_types(runner_conf)
+#     )
 
-    # Handle type coercion for string and binary types
-    result_func = lambda rb: rb  # noqa: E731
-    if type(return_type) == StringType:
-        result_func = lambda r: str(r) if r is not None else r  # noqa: E731
-    elif type(return_type) == BinaryType:
-        result_func = lambda r: bytes(r) if r is not None else r  # noqa: E731
+#     # Handle type coercion for string and binary types
+#     result_func = lambda rb: rb  # noqa: E731
+#     if type(return_type) == StringType:
+#         result_func = lambda r: str(r) if r is not None else r  # noqa: E731
+#     elif type(return_type) == BinaryType:
+#         result_func = lambda r: bytes(r) if r is not None else r  # noqa: E731
 
-    if zero_arg_exec:
-        def get_args(*record_batches: pa.RecordBatch):
-            return [() for _ in range(record_batches[0].num_rows)]
-    else:
-        # def get_args(*record_batches: pa.RecordBatch):
-        #     # Convert record batches to rows
-        #     rows = []
-        #     for i in range(record_batches[0].num_rows):
-        #         row = tuple(rb.column(0)[i].as_py() for rb in record_batches)
-        #         rows.append(row)
-        #     return rows
-        def get_args(*record_batches: pa.RecordBatch):
-            print("\n*** Debug record_batches ***")
-            print(f"Number of record batches: {len(record_batches)}")
-            print(f"Schema of first batch: {record_batches[0].schema}")
+#     if zero_arg_exec:
+#         def get_args(*record_batches: pa.RecordBatch):
+#             return [() for _ in range(record_batches[0].num_rows)]
+#     else:
+#         # def get_args(*record_batches: pa.RecordBatch):
+#         #     # Convert record batches to rows
+#         #     rows = []
+#         #     for i in range(record_batches[0].num_rows):
+#         #         row = tuple(rb.column(0)[i].as_py() for rb in record_batches)
+#         #         rows.append(row)
+#         #     return rows
+#         def get_args(*record_batches: pa.RecordBatch):
+#             print("\n*** Debug record_batches ***")
+#             print(f"Number of record batches: {len(record_batches)}")
             
-            rows = []
-            for i in range(record_batches[0].num_rows):
-                # Get values from all columns, not just column(0)
-                row = []
-                for offset in args_kwargs_offsets:
-                    value = record_batches[0].column(offset)[i].as_py()
-                    row.append(value)
-                rows.append(tuple(row))
-                print(f"Processing row {i}: {row}")
-            return rows
+#             rows = []
+#             for i in range(record_batches[0].num_rows):
+#                 # Get values from all columns, not just column(0)
+#                 row = []
+#                 for offset in args_kwargs_offsets:
+#                     value = record_batches[0].column(offset)[i].as_py()
+#                     row.append(value)
+#                 rows.append(tuple(row))
+#                 print(f"Processing row {i}: {row}")
+#             return rows
 
-    if "spark.sql.execution.pythonUDF.arrow.concurrency.level" in runner_conf:
-        from concurrent.futures import ThreadPoolExecutor
-        c = int(runner_conf["spark.sql.execution.pythonUDF.arrow.concurrency.level"])
+#     if "spark.sql.execution.pythonUDF.arrow.concurrency.level" in runner_conf:
+#         from concurrent.futures import ThreadPoolExecutor
+#         c = int(runner_conf["spark.sql.execution.pythonUDF.arrow.concurrency.level"])
 
-        @fail_on_stopiteration
-        def evaluate(*record_batches: pa.RecordBatch) -> pa.RecordBatch:
-            assert(False)
-            with ThreadPoolExecutor(max_workers=c) as pool:
-                results = list(pool.map(lambda row: result_func(func(*row)), get_args(*record_batches)))
-                return pa.RecordBatch.from_arrays([pa.array(results)], ["result"])
-    else:
-        @fail_on_stopiteration
-        def evaluate(*record_batches: pa.RecordBatch) -> pa.RecordBatch:
-            assert(False)
-            results = [result_func(func(*row)) for row in get_args(*record_batches)]
-            return pa.RecordBatch.from_arrays([pa.array(results)], ["result"])
+#         @fail_on_stopiteration
+#         def evaluate(*record_batches: pa.RecordBatch) -> pa.RecordBatch:
+#             with ThreadPoolExecutor(max_workers=c) as pool:
+#                 results = list(pool.map(lambda row: result_func(func(*row)), get_args(*record_batches)))
+#                 return pa.RecordBatch.from_arrays([pa.array(results)], ["result"])
+#     else:
+#         @fail_on_stopiteration
+#         def evaluate(*record_batches: pa.RecordBatch) -> pa.RecordBatch:
+#             results = [result_func(func(*row)) for row in get_args(*record_batches)]
+#             return pa.RecordBatch.from_arrays([pa.array(results)], ["result"])
 
-    def verify_result_length(result, length):
-        if result.num_rows != length:
-            raise PySparkRuntimeError(
-                errorClass="SCHEMA_MISMATCH_FOR_PANDAS_UDF",
-                messageParameters={
-                    "udf_type": "arrow_batch_udf",
-                    "expected": str(length),
-                    "actual": str(result.num_rows),
-                },
-            )
-        return result
-    return (
-        args_kwargs_offsets,
-        lambda *a: (verify_result_length(evaluate(*a), a[0].num_rows), arrow_return_type, return_type),
-    )
+#     def verify_result_length(result, length):
+#         if result.num_rows != length:
+#             raise PySparkRuntimeError(
+#                 errorClass="SCHEMA_MISMATCH_FOR_PANDAS_UDF",
+#                 messageParameters={
+#                     "udf_type": "arrow_batch_udf",
+#                     "expected": str(length),
+#                     "actual": str(result.num_rows),
+#                 },
+#             )
+#         return result
+#     return (
+#         args_kwargs_offsets,
+#         lambda *a: (verify_result_length(evaluate(*a), a[0].num_rows), arrow_return_type, return_type),
+#     )
 
 
 def wrap_pandas_batch_iter_udf(f, return_type, runner_conf):
