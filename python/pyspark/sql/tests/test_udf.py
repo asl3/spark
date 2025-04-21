@@ -53,6 +53,35 @@ from pyspark.testing.sqlutils import (
 )
 from pyspark.testing.utils import assertDataFrameEqual, timeout
 
+class AmandaTest(ReusedSQLTestCase):  # Add the parent class
+    @classmethod
+    def setUpClass(cls):
+        print("\n *** begin set up class")
+        super(AmandaTest, cls).setUpClass()  # Fix the super() call to use the class name
+        cls.spark.conf.set("spark.sql.execution.pythonUDF.arrow.enabled", "true")
+
+    def test_udf(self):
+        print("\n *** begin test_udf")
+        import pandas, pyarrow, sys
+        with self.tempView("test"):
+            print("\n *** begin test_udf2")
+            self.spark.conf.set("spark.sql.execution.pythonUDF.arrow.enabled", "true")
+            
+            @udf("int", useArrow=True)
+            def test_udf(a, b):
+                print("test_udf called with:", a, b)  # Add debug print
+                return a + b
+                
+            self.spark.udf.register("test_udf", test_udf)
+            
+            # Create test data with explicit columns
+            df = self.spark.createDataFrame([(2, 2), (3, 3)], ["a", "b"])
+            df.createOrReplaceTempView("test_data")
+            
+            # Test the UDF with direct column references
+            res = self.spark.sql("SELECT test_udf(a, b) FROM test_data").collect()
+            self.assertEqual(4, res[0][0])  # First row should be 2 + 2 = 4
+            self.assertTrue(False)
 
 class BaseUDFTestsMixin(object):
     def test_udf_with_callable(self):
@@ -94,19 +123,46 @@ class BaseUDFTestsMixin(object):
         [row] = sqlContext.sql("SELECT oneArg('test')").collect()
         self.assertEqual(row[0], 4)
 
+    # def test_udf2(self):
+    #     import pandas, pyarrow, sys
+    #     with self.tempView("test"):
+    #         print("\n *** begin test_udf2")
+    #         self.spark.conf.set("spark.sql.execution.pythonUDF.arrow.enabled", "true")
+    #         @udf("int", useArrow=True)
+    #         def test_udf(a, b):
+    #             return a + b
+    #         self.spark.udf.register("test_udf", test_udf)
+    #         # self.spark.catalog.registerFunction("strlen", lambda string: len(string), IntegerType())
+    #         self.spark.createDataFrame([("test",)], ["a"]).createOrReplaceTempView("test")
+    #         # [res] = self.spark.sql("SELECT strlen(a) FROM test WHERE strlen(a) > 1").collect()
+    #         # self.assertEqual(4, res[0])
+    #         print("\n added a new test")
+    #         print("Arrow enabled:", self.spark.conf.get("spark.sql.execution.pythonUDF.arrow.enabled"))
+    #         print("PyArrow version:", pyarrow.__version__ if 'pyarrow' in sys.modules else "not installed")
+    #         print("Pandas version:", pandas.__version__ if 'pandas' in sys.modules else "not installed")
+    #         res = self.spark.sql("SELECT test_udf(id, b => id * 10) FROM range(2)").collect()
+    #         self.assertEqual(4, res[0])
+    #         self.assertTrue(False)
+
     def test_udf2(self):
-        self.spark.conf.set("spark.sql.execution.pythonUDF.arrow.enabled", "true")
-        @udf("int")
-        def test_udf(a, b):
-            return a + b
+        import pandas, pyarrow, sys
         with self.tempView("test"):
             print("\n *** begin test_udf2")
-            self.spark.catalog.registerFunction("strlen", lambda string: len(string), IntegerType())
-            self.spark.createDataFrame([("test",)], ["a"]).createOrReplaceTempView("test")
-            [res] = self.spark.sql("SELECT strlen(a) FROM test WHERE strlen(a) > 1").collect()
-            self.assertEqual(4, res[0])
-            print("\n added a new test")
-            self.spark.sql("SELECT test_udf(id, b => id * 10) FROM range(2)")
+            self.spark.conf.set("spark.sql.execution.pythonUDF.arrow.enabled", "true")
+            
+            @udf("int", useArrow=True)
+            def test_udf(a, b):
+                return a + b
+                
+            self.spark.udf.register("test_udf", test_udf)
+            
+            # Create test data with explicit columns
+            df = self.spark.createDataFrame([(2, 2), (3, 3)], ["a", "b"])
+            df.createOrReplaceTempView("test_data")
+            
+            # Test the UDF with direct column references
+            res = self.spark.sql("SELECT test_udf(a, b) FROM test_data").collect()
+            self.assertEqual(4, res[0][0])  # First row should be 2 + 2 = 4
             self.assertTrue(False)
 
     def test_udf3(self):
