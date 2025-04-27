@@ -53,6 +53,35 @@ from pyspark.testing.sqlutils import (
 )
 from pyspark.testing.utils import assertDataFrameEqual, timeout
 
+class AmandaTest(ReusedSQLTestCase):  # Add the parent class
+    @classmethod
+    def setUpClass(cls):
+        print("\n *** begin set up class")
+        super(AmandaTest, cls).setUpClass()  # Fix the super() call to use the class name
+        cls.spark.conf.set("spark.sql.execution.pythonUDF.arrow.enabled", "true")
+
+    def test_udf(self):
+        print("\n *** begin test_udf")
+        import pandas, pyarrow, sys
+        with self.tempView("test"):
+            print("\n *** begin test_udf2")
+            self.spark.conf.set("spark.sql.execution.pythonUDF.arrow.enabled", "true")
+
+            @udf("int", useArrow=True)
+            def test_udf(a, b):
+                print("test_udf called with:", a, b)  # Add debug print
+                return a + b
+
+            self.spark.udf.register("test_udf", test_udf)
+
+            # Create test data with explicit columns
+            df = self.spark.createDataFrame([(2, 2), (3, 3)], ["a", "b"])
+            df.createOrReplaceTempView("test_data")
+
+            # Test the UDF with direct column references
+            res = self.spark.sql("SELECT test_udf(a, b) FROM test_data").collect()
+            self.assertEqual(4, res[0][0])  # First row should be 2 + 2 = 4
+            self.assertTrue(False)
 
 class BaseUDFTestsMixin(object):
     def test_udf_with_callable(self):
@@ -94,12 +123,47 @@ class BaseUDFTestsMixin(object):
         [row] = sqlContext.sql("SELECT oneArg('test')").collect()
         self.assertEqual(row[0], 4)
 
+    # def test_udf2(self):
+    #     import pandas, pyarrow, sys
+    #     with self.tempView("test"):
+    #         print("\n *** begin test_udf2")
+    #         self.spark.conf.set("spark.sql.execution.pythonUDF.arrow.enabled", "true")
+    #         @udf("int", useArrow=True)
+    #         def test_udf(a, b):
+    #             return a + b
+    #         self.spark.udf.register("test_udf", test_udf)
+    #         # self.spark.catalog.registerFunction("strlen", lambda string: len(string), IntegerType())
+    #         self.spark.createDataFrame([("test",)], ["a"]).createOrReplaceTempView("test")
+    #         # [res] = self.spark.sql("SELECT strlen(a) FROM test WHERE strlen(a) > 1").collect()
+    #         # self.assertEqual(4, res[0])
+    #         print("\n added a new test")
+    #         print("Arrow enabled:", self.spark.conf.get("spark.sql.execution.pythonUDF.arrow.enabled"))
+    #         print("PyArrow version:", pyarrow.__version__ if 'pyarrow' in sys.modules else "not installed")
+    #         print("Pandas version:", pandas.__version__ if 'pandas' in sys.modules else "not installed")
+    #         res = self.spark.sql("SELECT test_udf(id, b => id * 10) FROM range(2)").collect()
+    #         self.assertEqual(4, res[0])
+    #         self.assertTrue(False)
+
     def test_udf2(self):
+        import pandas, pyarrow, sys
         with self.tempView("test"):
-            self.spark.catalog.registerFunction("strlen", lambda string: len(string), IntegerType())
-            self.spark.createDataFrame([("test",)], ["a"]).createOrReplaceTempView("test")
-            [res] = self.spark.sql("SELECT strlen(a) FROM test WHERE strlen(a) > 1").collect()
-            self.assertEqual(4, res[0])
+            print("\n *** begin test_udf2")
+            self.spark.conf.set("spark.sql.execution.pythonUDF.arrow.enabled", "true")
+
+            @udf("int", useArrow=True)
+            def test_udf(a, b):
+                return a + b
+
+            self.spark.udf.register("test_udf", test_udf)
+
+            # Create test data with explicit columns
+            df = self.spark.createDataFrame([(2, 2), (3, 3)], ["a", "b"])
+            df.createOrReplaceTempView("test_data")
+
+            # Test the UDF with direct column references
+            res = self.spark.sql("SELECT test_udf(a, b) FROM test_data").collect()
+            self.assertEqual(4, res[0][0])  # First row should be 2 + 2 = 4
+            self.assertTrue(False)
 
     def test_udf3(self):
         two_args = self.spark.catalog.registerFunction(
@@ -279,8 +343,8 @@ class BaseUDFTestsMixin(object):
 
         def runWithJoinType(join_type, type_string):
             with self.assertRaisesRegex(
-                AnalysisException,
-                """Python UDF in the ON clause of a %s JOIN.""" % type_string,
+                    AnalysisException,
+                    """Python UDF in the ON clause of a %s JOIN.""" % type_string,
             ):
                 left.join(right, [f("a", "b"), left.a1 == right.b1], join_type).collect()
 
@@ -1068,17 +1132,18 @@ class BaseUDFTestsMixin(object):
         self.spark.udf.register("test_udf", test_udf)
 
         for i, df in enumerate(
-            [
-                self.spark.range(2).select(test_udf(col("id"), b=col("id") * 10)),
-                self.spark.range(2).select(test_udf(a=col("id"), b=col("id") * 10)),
-                self.spark.range(2).select(test_udf(b=col("id") * 10, a=col("id"))),
-                self.spark.sql("SELECT test_udf(id, b => id * 10) FROM range(2)"),
-                self.spark.sql("SELECT test_udf(a => id, b => id * 10) FROM range(2)"),
-                self.spark.sql("SELECT test_udf(b => id * 10, a => id) FROM range(2)"),
-            ]
+                [
+                    self.spark.range(2).select(test_udf(col("id"), b=col("id") * 10)),
+                    self.spark.range(2).select(test_udf(a=col("id"), b=col("id") * 10)),
+                    self.spark.range(2).select(test_udf(b=col("id") * 10, a=col("id"))),
+                    self.spark.sql("SELECT test_udf(id, b => id * 10) FROM range(2)"),
+                    self.spark.sql("SELECT test_udf(a => id, b => id * 10) FROM range(2)"),
+                    self.spark.sql("SELECT test_udf(b => id * 10, a => id) FROM range(2)"),
+                ]
         ):
             with self.subTest(query_no=i):
                 assertDataFrameEqual(df, [Row(0), Row(101)])
+        self.assertTrue(False)
 
     def test_named_arguments_negative(self):
         @udf("int")
@@ -1088,8 +1153,8 @@ class BaseUDFTestsMixin(object):
         self.spark.udf.register("test_udf", test_udf)
 
         with self.assertRaisesRegex(
-            AnalysisException,
-            "DUPLICATE_ROUTINE_PARAMETER_ASSIGNMENT.DOUBLE_NAMED_ARGUMENT_REFERENCE",
+                AnalysisException,
+                "DUPLICATE_ROUTINE_PARAMETER_ASSIGNMENT.DOUBLE_NAMED_ARGUMENT_REFERENCE",
         ):
             self.spark.sql("SELECT test_udf(a => id, a => id * 10) FROM range(2)").show()
 
@@ -1097,12 +1162,12 @@ class BaseUDFTestsMixin(object):
             self.spark.sql("SELECT test_udf(a => id, id * 10) FROM range(2)").show()
 
         with self.assertRaisesRegex(
-            PythonException, r"test_udf\(\) got an unexpected keyword argument 'c'"
+                PythonException, r"test_udf\(\) got an unexpected keyword argument 'c'"
         ):
             self.spark.sql("SELECT test_udf(c => 'x') FROM range(2)").show()
 
         with self.assertRaisesRegex(
-            PythonException, r"test_udf\(\) got multiple values for argument 'a'"
+                PythonException, r"test_udf\(\) got multiple values for argument 'a'"
         ):
             self.spark.sql("SELECT test_udf(id, a => id * 10) FROM range(2)").show()
 
@@ -1114,20 +1179,20 @@ class BaseUDFTestsMixin(object):
         self.spark.udf.register("test_udf", test_udf)
 
         for i, df in enumerate(
-            [
-                self.spark.range(2).select(test_udf(a=col("id"), b=col("id") * 10)),
-                self.spark.range(2).select(test_udf(b=col("id") * 10, a=col("id"))),
-                self.spark.sql("SELECT test_udf(a => id, b => id * 10) FROM range(2)"),
-                self.spark.sql("SELECT test_udf(b => id * 10, a => id) FROM range(2)"),
-            ]
+                [
+                    self.spark.range(2).select(test_udf(a=col("id"), b=col("id") * 10)),
+                    self.spark.range(2).select(test_udf(b=col("id") * 10, a=col("id"))),
+                    self.spark.sql("SELECT test_udf(a => id, b => id * 10) FROM range(2)"),
+                    self.spark.sql("SELECT test_udf(b => id * 10, a => id) FROM range(2)"),
+                ]
         ):
             with self.subTest(query_no=i):
                 assertDataFrameEqual(df, [Row(0), Row(101)])
 
         # negative
         with self.assertRaisesRegex(
-            AnalysisException,
-            "DUPLICATE_ROUTINE_PARAMETER_ASSIGNMENT.DOUBLE_NAMED_ARGUMENT_REFERENCE",
+                AnalysisException,
+                "DUPLICATE_ROUTINE_PARAMETER_ASSIGNMENT.DOUBLE_NAMED_ARGUMENT_REFERENCE",
         ):
             self.spark.sql("SELECT test_udf(a => id, a => id * 10) FROM range(2)").show()
 
@@ -1143,26 +1208,26 @@ class BaseUDFTestsMixin(object):
 
         # without "b"
         for i, df in enumerate(
-            [
-                self.spark.range(2).select(test_udf(col("id"))),
-                self.spark.range(2).select(test_udf(a=col("id"))),
-                self.spark.sql("SELECT test_udf(id) FROM range(2)"),
-                self.spark.sql("SELECT test_udf(a => id) FROM range(2)"),
-            ]
+                [
+                    self.spark.range(2).select(test_udf(col("id"))),
+                    self.spark.range(2).select(test_udf(a=col("id"))),
+                    self.spark.sql("SELECT test_udf(id) FROM range(2)"),
+                    self.spark.sql("SELECT test_udf(a => id) FROM range(2)"),
+                ]
         ):
             with self.subTest(with_b=False, query_no=i):
                 assertDataFrameEqual(df, [Row(0), Row(1)])
 
         # with "b"
         for i, df in enumerate(
-            [
-                self.spark.range(2).select(test_udf(col("id"), b=col("id") * 10)),
-                self.spark.range(2).select(test_udf(a=col("id"), b=col("id") * 10)),
-                self.spark.range(2).select(test_udf(b=col("id") * 10, a=col("id"))),
-                self.spark.sql("SELECT test_udf(id, b => id * 10) FROM range(2)"),
-                self.spark.sql("SELECT test_udf(a => id, b => id * 10) FROM range(2)"),
-                self.spark.sql("SELECT test_udf(b => id * 10, a => id) FROM range(2)"),
-            ]
+                [
+                    self.spark.range(2).select(test_udf(col("id"), b=col("id") * 10)),
+                    self.spark.range(2).select(test_udf(a=col("id"), b=col("id") * 10)),
+                    self.spark.range(2).select(test_udf(b=col("id") * 10, a=col("id"))),
+                    self.spark.sql("SELECT test_udf(id, b => id * 10) FROM range(2)"),
+                    self.spark.sql("SELECT test_udf(a => id, b => id * 10) FROM range(2)"),
+                    self.spark.sql("SELECT test_udf(b => id * 10, a => id) FROM range(2)"),
+                ]
         ):
             with self.subTest(with_b=True, query_no=i):
                 assertDataFrameEqual(df, [Row(0), Row(101)])
@@ -1214,10 +1279,10 @@ class BaseUDFTestsMixin(object):
 
     def test_udf_kill_on_timeout(self):
         with self.sql_conf(
-            {
-                "spark.sql.execution.pyspark.udf.idleTimeoutSeconds": "1s",
-                "spark.sql.execution.pyspark.udf.killOnIdleTimeout": "true",
-            }
+                {
+                    "spark.sql.execution.pyspark.udf.idleTimeoutSeconds": "1s",
+                    "spark.sql.execution.pyspark.udf.killOnIdleTimeout": "true",
+                }
         ):
 
             @udf
@@ -1374,7 +1439,7 @@ class UDFTests(BaseUDFTestsMixin, ReusedSQLTestCase):
     @classmethod
     def setUpClass(cls):
         super(BaseUDFTestsMixin, cls).setUpClass()
-        cls.spark.conf.set("spark.sql.execution.pythonUDF.arrow.enabled", "false")
+        cls.spark.conf.set("spark.sql.execution.pythonUDF.arrow.enabled", "true")
 
     # We cannot check whether the batch size is effective or not. We just run the query with
     # various batch size and see whether the query runs successfully, and the output is
@@ -1427,11 +1492,12 @@ class UDFInitializationTests(unittest.TestCase):
             SparkSession._instantiatedSession,
             "SparkSession shouldn't be initialized when UserDefinedFunction is created.",
         )
+        assert(False)
 
     def test_err_parse_type_when_no_sc(self):
         with self.assertRaisesRegex(
-            RuntimeError,
-            "SparkContext or SparkSession should be created first",
+                RuntimeError,
+                "SparkContext or SparkSession should be created first",
         ):
             udf(lambda x: x, "integer")
 

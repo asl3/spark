@@ -33,6 +33,7 @@ from pyspark.accumulators import (
     _accumulatorRegistry,
     _deserialize_accumulator,
 )
+from pyspark.sql.conversion import LocalDataToArrowConversion, ArrowTableToRowsConversion
 from pyspark.sql.streaming.stateful_processor_api_client import StatefulProcessorApiClient
 from pyspark.sql.streaming.stateful_processor_util import TransformWithStateInPySparkFuncMode
 from pyspark.taskcontext import BarrierTaskContext, TaskContext
@@ -50,6 +51,7 @@ from pyspark.serializers import (
 )
 from pyspark.sql.functions import SkipRestOfInputTableException
 from pyspark.sql.pandas.serializers import (
+    ArrowStreamSerializer,
     ArrowStreamPandasUDFSerializer,
     ArrowStreamPandasUDTFSerializer,
     CogroupArrowUDFSerializer,
@@ -62,7 +64,7 @@ from pyspark.sql.pandas.serializers import (
     TransformWithStateInPySparkRowSerializer,
     TransformWithStateInPySparkRowInitStateSerializer,
 )
-from pyspark.sql.pandas.types import to_arrow_type
+from pyspark.sql.pandas.types import to_arrow_type, from_arrow_schema
 from pyspark.sql.types import (
     ArrayType,
     BinaryType,
@@ -159,7 +161,7 @@ def wrap_scalar_pandas_udf(f, args_offsets, kwargs_offsets, return_type, runner_
 
 
 def wrap_arrow_batch_udf(f, args_offsets, kwargs_offsets, return_type, runner_conf):
-    import pandas as pd
+    import pyarrow as pa
 
     func, args_kwargs_offsets = wrap_kwargs_support(f, args_offsets, kwargs_offsets)
     zero_arg_exec = False
@@ -183,34 +185,53 @@ def wrap_arrow_batch_udf(f, args_offsets, kwargs_offsets, return_type, runner_co
         result_func = lambda r: bytes(r) if r is not None else r  # noqa: E731
 
     if zero_arg_exec:
-
-        def get_args(*args: pd.Series):
-            return [() for _ in args[0]]
+        def get_args(*args: pa.RecordBatch):
+            print("\n **** args: ", args, "\n")
+            assert(False)
+            # for arg in args:
+            #     assert isinstance(arg, pa.RecordBatch), (
+            #         f"Expected pyarrow.RecordBatch but got {type(arg)}. "
+            #         "Make sure Arrow-native execution is used without Pandas conversion."
+            #     )
+            # Create a list of empty tuples, one for each row (based on length of first arg)
+            first_array = args[0]
+            if isinstance(first_array, pa.ChunkedArray):
+                first_array = first_array.combine_chunks()
+            return [() for _ in range(len(first_array))]
 
     else:
-
-        def get_args(*args: pd.Series):
-            return zip(*args)
+        def get_args(*args: pa.RecordBatch):
+            print("\n **** args: ", args, "\n")
+            assert(False)
+            # for arg in args:
+            #     assert isinstance(arg, pa.RecordBatch), (
+            #         f"Expected pyarrow.RecordBatch but got {type(arg)}. "
+            #         "Make sure Arrow-native execution is used without Pandas conversion."
+            #     )
+            # Combine chunks if necessary, then zip across all columns
+            arrays = [
+                arg.combine_chunks() if isinstance(arg, pa.ChunkedArray) else arg
+                for arg in args
+            ]
+            return zip(*(arr.to_pylist() for arr in arrays))
 
     if "spark.sql.execution.pythonUDF.arrow.concurrency.level" in runner_conf:
-        from concurrent.futures import ThreadPoolExecutor
-
         c = int(runner_conf["spark.sql.execution.pythonUDF.arrow.concurrency.level"])
 
         @fail_on_stopiteration
-        def evaluate(*args: pd.Series) -> pd.Series:
+        def evaluate(*args: pa.RecordBatch) -> pa.RecordBatch:
             with ThreadPoolExecutor(max_workers=c) as pool:
-                return pd.Series(
-                    list(pool.map(lambda row: result_func(func(*row)), get_args(*args)))
-                )
+                results = list(pool.map(lambda row: result_func(func(*row)), get_args(*args)))
+            return pa.RecordBatch(results, type=arrow_return_type)
 
     else:
 
         @fail_on_stopiteration
-        def evaluate(*args: pd.Series) -> pd.Series:
-            return pd.Series([result_func(func(*row)) for row in get_args(*args)])
+        def evaluate(*args: pa.RecordBatch) -> pa.RecordBatch:
+            results = [result_func(func(*row)) for row in get_args(*args)]
+            return pa.RecordBatch.from_arrays(results, type=arrow_return_type)
 
-    def verify_result_length(result, length):
+    def verify_result_length(result: pa.RecordBatch, length: int) -> pa.RecordBatch:
         if len(result) != length:
             raise PySparkRuntimeError(
                 errorClass="SCHEMA_MISMATCH_FOR_PANDAS_UDF",
@@ -883,6 +904,7 @@ def wrap_memory_profiler(f, result_id):
 
 
 def read_single_udf(pickleSer, infile, eval_type, runner_conf, udf_index, profiler):
+    assert(False) # TODO check if we reach here
     num_arg = read_int(infile)
 
     if eval_type in (
@@ -1659,6 +1681,8 @@ def read_udfs(pickleSer, infile, eval_type):
             ser = ArrowStreamUDFSerializer()
         elif eval_type == PythonEvalType.SQL_GROUPED_MAP_ARROW_UDF:
             ser = ArrowStreamGroupUDFSerializer(_assign_cols_by_name)
+        elif eval_type == PythonEvalType.SQL_ARROW_BATCHED_UDF:
+            ser = ArrowStreamUDFSerializer()
         else:
             # Scalar Pandas UDF handles struct type arguments as pandas DataFrames instead of
             # pandas Series. See SPARK-27240.
