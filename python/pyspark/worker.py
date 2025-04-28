@@ -904,7 +904,6 @@ def wrap_memory_profiler(f, result_id):
 
 
 def read_single_udf(pickleSer, infile, eval_type, runner_conf, udf_index, profiler):
-    assert(False) # TODO check if we reach here
     num_arg = read_int(infile)
 
     if eval_type in (
@@ -918,16 +917,23 @@ def read_single_udf(pickleSer, infile, eval_type, runner_conf, udf_index, profil
     ):
         args_offsets = []
         kwargs_offsets = {}
+        print("\n\n utf8_deserializer: ", utf8_deserializer, "\n\n")
+        print("\n\n infile: ", infile, "\n\n")
+        print("\n\n num_arg: ", num_arg, "\n\n")
+        assert(False)
         for _ in range(num_arg):
             offset = read_int(infile)
             if read_bool(infile):
-                name = utf8_deserializer.loads(infile)
-                kwargs_offsets[name] = offset
+                # name = utf8_deserializer.loads(infile)
+                # kwargs_offsets[name] = offset
+                pass
             else:
                 args_offsets.append(offset)
     else:
         args_offsets = [read_int(infile) for i in range(num_arg)]
         kwargs_offsets = {}
+
+    assert(False)
 
     chained_func = None
     for i in range(read_int(infile)):
