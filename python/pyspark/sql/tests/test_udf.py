@@ -162,6 +162,7 @@ class BaseUDFTestsMixin(object):
 
             # Test the UDF with direct column references
             res = self.spark.sql("SELECT test_udf(a, b) FROM test_data").collect()
+            print("\n\n**** res: ", res)
             self.assertEqual(4, res[0][0])  # First row should be 2 + 2 = 4
             self.assertTrue(False)
 

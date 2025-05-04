@@ -117,10 +117,19 @@ class ArrowStreamSerializer(Serializer):
 
         writer = None
         try:
-            for batch in iterator:
+            for raw_batch in iterator:
                 if writer is None:
-                    writer = pa.RecordBatchStreamWriter(stream, batch.schema)
-                writer.write_batch(batch)
+                    print("\n\n **** batch: ", raw_batch, "****\n\n")
+                    schema = pa.schema([("value", pa.int32())])
+                    print("\n\n **** schema: ", schema, "****\n\n")
+                    writer = pa.RecordBatchStreamWriter(stream, schema)
+                    data = raw_batch[0][0]  # the actual data
+                    print("\n\n **** data: ", data, "****\n\n")
+                    batch = pa.record_batch([pa.array(data, type=pa.int32())], schema=schema)
+                    print("\n\n **** pa batch: ", batch, "****\n\n")
+                    writer.write_batch(batch)
+                else:
+                    writer.write_batch(batch)
         finally:
             if writer is not None:
                 writer.close()
@@ -147,11 +156,13 @@ class ArrowStreamUDFSerializer(ArrowStreamSerializer):
         Flatten the struct into Arrow's record batches.
         """
         import pyarrow as pa
+        import numpy as np
 
         batches = super(ArrowStreamUDFSerializer, self).load_stream(stream)
         for batch in batches:
             struct = batch.column(0)
-            yield [pa.RecordBatch.from_arrays(struct.flatten(), schema=pa.schema(struct.type))]
+            # numpy_array = struct.to_numpy()
+            yield [pa.RecordBatch.from_arrays(struct, schema=pa.schema(struct.type))]
 
     def dump_stream(self, iterator, stream):
         """

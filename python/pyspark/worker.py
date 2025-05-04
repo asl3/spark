@@ -202,7 +202,7 @@ def wrap_arrow_batch_udf(f, args_offsets, kwargs_offsets, return_type, runner_co
     else:
         def get_args(*args: pa.RecordBatch):
             print("\n **** args: ", args, "\n")
-            assert(False)
+            # assert(False)
             # for arg in args:
             #     assert isinstance(arg, pa.RecordBatch), (
             #         f"Expected pyarrow.RecordBatch but got {type(arg)}. "
@@ -229,7 +229,9 @@ def wrap_arrow_batch_udf(f, args_offsets, kwargs_offsets, return_type, runner_co
         @fail_on_stopiteration
         def evaluate(*args: pa.RecordBatch) -> pa.RecordBatch:
             results = [result_func(func(*row)) for row in get_args(*args)]
-            return pa.RecordBatch.from_arrays(results, type=arrow_return_type)
+            return results
+            # return pa.RecordBatch.from_arrays(results)
+            # return pa.RecordBatch.from_arrays(results, type=arrow_return_type)
 
     def verify_result_length(result: pa.RecordBatch, length: int) -> pa.RecordBatch:
         if len(result) != length:
@@ -920,7 +922,7 @@ def read_single_udf(pickleSer, infile, eval_type, runner_conf, udf_index, profil
         print("\n\n utf8_deserializer: ", utf8_deserializer, "\n\n")
         print("\n\n infile: ", infile, "\n\n")
         print("\n\n num_arg: ", num_arg, "\n\n")
-        assert(False)
+        # assert(False)
         for _ in range(num_arg):
             offset = read_int(infile)
             if read_bool(infile):
@@ -933,7 +935,7 @@ def read_single_udf(pickleSer, infile, eval_type, runner_conf, udf_index, profil
         args_offsets = [read_int(infile) for i in range(num_arg)]
         kwargs_offsets = {}
 
-    assert(False)
+    # assert(False)
 
     chained_func = None
     for i in range(read_int(infile)):
@@ -1688,7 +1690,14 @@ def read_udfs(pickleSer, infile, eval_type):
         elif eval_type == PythonEvalType.SQL_GROUPED_MAP_ARROW_UDF:
             ser = ArrowStreamGroupUDFSerializer(_assign_cols_by_name)
         elif eval_type == PythonEvalType.SQL_ARROW_BATCHED_UDF:
-            ser = ArrowStreamUDFSerializer()
+            input_types = (
+                [f.dataType for f in _parse_datatype_json_string(utf8_deserializer.loads(infile))]
+                if eval_type == PythonEvalType.SQL_ARROW_BATCHED_UDF
+                else None
+            )
+            print("\n\n*** input_types: ", input_types, "\n\n")
+            # ser = ArrowStreamUDFSerializer()
+            ser = ArrowStreamSerializer()
         else:
             # Scalar Pandas UDF handles struct type arguments as pandas DataFrames instead of
             # pandas Series. See SPARK-27240.
