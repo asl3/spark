@@ -2206,7 +2206,9 @@ def main(infile, outfile):
             iterator = deserializer.load_stream(infile)
             out_iter = func(split_index, iterator)
             try:
+                print("\n **** before dump stream")
                 serializer.dump_stream(out_iter, outfile)
+                print("\n **** after dump stream")
             finally:
                 if hasattr(out_iter, "close"):
                     out_iter.close()
@@ -2220,8 +2222,10 @@ def main(infile, outfile):
         # reuse.
         TaskContext._setTaskContext(None)
         BarrierTaskContext._setTaskContext(None)
+        print("\n **** try success")
     except BaseException as e:
         handle_worker_exception(e, outfile)
+        print("\n **** try failed" + str(e))
         sys.exit(-1)
     finally:
         if faulthandler_log_path:

@@ -123,13 +123,16 @@ class ArrowStreamSerializer(Serializer):
                     schema = pa.schema([("value", pa.int32())])
                     print("\n\n **** schema: ", schema, "****\n\n")
                     writer = pa.RecordBatchStreamWriter(stream, schema)
-                    data = raw_batch[0][0]  # the actual data
-                    print("\n\n **** data: ", data, "****\n\n")
-                    batch = pa.record_batch([pa.array(data, type=pa.int32())], schema=schema)
+                data = raw_batch[0][0]  # the actual data
+                print("\n\n **** data: ", data, "****\n\n")
+                print("\n\n **** 2 data: ", data, "****\n\n")
+                try:
+                    batch = pa.record_batch([pa.array([data], type=pa.int32())], schema=schema)
                     print("\n\n **** pa batch: ", batch, "****\n\n")
-                    writer.write_batch(batch)
-                else:
-                    writer.write_batch(batch)
+                except Exception as e:
+                    print("Failed to print batch:", e)
+                writer.write_batch(batch)
+                print("\n\n **** written batch: ", batch, "****\n\n")
         finally:
             if writer is not None:
                 writer.close()
@@ -139,6 +142,7 @@ class ArrowStreamSerializer(Serializer):
 
         reader = pa.ipc.open_stream(stream)
         for batch in reader:
+            print("\n **** batch in load_stream: ", batch, "****\n\n")
             yield batch
 
     def __repr__(self):
