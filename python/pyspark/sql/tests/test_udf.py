@@ -164,7 +164,7 @@ class BaseUDFTestsMixin(object):
             res = self.spark.sql("SELECT test_udf(a, b) FROM test_data").collect()
             print("\n\n**** res: ", res)
             self.assertEqual(4, res[0][0])  # First row should be 2 + 2 = 4
-            self.assertTrue(False)
+            # self.assertTrue(False)
 
     def test_udf3(self):
         two_args = self.spark.catalog.registerFunction(

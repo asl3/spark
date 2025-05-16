@@ -56,6 +56,7 @@ from pyspark.sql.pandas.serializers import (
     ArrowStreamPandasUDTFSerializer,
     CogroupArrowUDFSerializer,
     CogroupPandasUDFSerializer,
+    ArrowStreamArrowUDFSerializer,
     ArrowStreamUDFSerializer,
     ArrowStreamGroupUDFSerializer,
     ApplyInPandasWithStateSerializer,
@@ -1697,7 +1698,8 @@ def read_udfs(pickleSer, infile, eval_type):
             )
             print("\n\n*** input_types: ", input_types, "\n\n")
             # ser = ArrowStreamUDFSerializer()
-            ser = ArrowStreamSerializer()
+            # ser = ArrowStreamSerializer()
+            ser = ArrowStreamArrowUDFSerializer(timezone, safecheck, _assign_cols_by_name, False)
         else:
             # Scalar Pandas UDF handles struct type arguments as pandas DataFrames instead of
             # pandas Series. See SPARK-27240.
