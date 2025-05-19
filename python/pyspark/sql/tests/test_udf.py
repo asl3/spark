@@ -93,6 +93,28 @@ class BaseUDFTestsMixin(object):
         sqlContext.registerFunction("oneArg", lambda x: len(x), IntegerType())
         [row] = sqlContext.sql("SELECT oneArg('test')").collect()
         self.assertEqual(row[0], 4)
+    
+    def test_udf_arrowserializer(self):
+        # import pandas, pyarrow, sys
+        with self.tempView("test"):
+            print("\n *** begin test_udf2")
+            self.spark.conf.set("spark.sql.execution.pythonUDF.arrow.enabled", "false")
+
+            @udf("int", useArrow=True)
+            def test_udf(a, b):
+                return a + b
+
+            self.spark.udf.register("test_udf", test_udf)
+
+            # Create test data with explicit columns
+            df = self.spark.createDataFrame([(2, 2), (3, 3)], ["a", "b"])
+            df.createOrReplaceTempView("test_data2")
+
+            # Test the UDF with direct column references
+            res = self.spark.sql("SELECT test_udf(a, b) FROM test_data2").collect()
+            print("\n\n**** res: ", res)
+            self.assertEqual(4, res[0][0])  # First row should be 2 + 2 = 4
+            # self.assertTrue(False)
 
     def test_udf2(self):
         with self.tempView("test"):
