@@ -77,6 +77,22 @@ class ArrowPythonUDFTestsMixin(BaseUDFTestsMixin):
             .first()
         )
 
+        # useArrow=None
+        row_none = (
+            self.spark.range(1)
+            .selectExpr(
+                "array(1, 2, 3) as array",
+            )
+            .select(
+                udf(lambda x: str(x), useArrow=None)("array"),
+            )
+            .first()
+        )
+
+        # # Both representations are valid - one with native Python types and one with NumPy types
+        # self.assertIn(row_true[0], ["[1, 2, 3]", "[np.int32(1), np.int32(2), np.int32(3)]"])
+        # self.assertIn(row_none[0], ["[1, 2, 3]", "[np.int32(1), np.int32(2), np.int32(3)]"])
+
         # useArrow=False
         row_false = (
             self.spark.range(1)
@@ -210,12 +226,18 @@ class ArrowPythonUDFTestsMixin(BaseUDFTestsMixin):
     def test_udf_use_arrow_and_session_conf(self):
         with self.sql_conf({"spark.sql.execution.pythonUDF.arrow.enabled": "true"}):
             self.assertEqual(
+                udf(lambda x: str(x), useArrow=None).evalType, PythonEvalType.SQL_ARROW_BATCHED_UDF
+            )
+            self.assertEqual(
                 udf(lambda x: str(x), useArrow=True).evalType, PythonEvalType.SQL_ARROW_BATCHED_UDF
             )
             self.assertEqual(
                 udf(lambda x: str(x), useArrow=False).evalType, PythonEvalType.SQL_BATCHED_UDF
             )
         with self.sql_conf({"spark.sql.execution.pythonUDF.arrow.enabled": "false"}):
+            self.assertEqual(
+                udf(lambda x: str(x), useArrow=None).evalType, PythonEvalType.SQL_BATCHED_UDF
+            )
             self.assertEqual(
                 udf(lambda x: str(x), useArrow=True).evalType, PythonEvalType.SQL_ARROW_BATCHED_UDF
             )
@@ -265,7 +287,19 @@ class ArrowPythonUDFLegacyTestsMixin(BaseUDFTestsMixin):
                     .first()
                 )
 
-                # self.assertEqual(row_true[0], row_none[0])  # "[1, 2, 3]"
+                # useArrow=None
+                row_none = (
+                    self.spark.range(1)
+                    .selectExpr(
+                        "array(1, 2, 3) as array",
+                    )
+                    .select(
+                        udf(lambda x: str(x), useArrow=None)("array"),
+                    )
+                    .first()
+                )
+
+                self.assertEqual(row_true[0], row_none[0])  # "[1, 2, 3]"
 
                 # useArrow=False
                 row_false = (
@@ -432,12 +466,18 @@ class ArrowPythonUDFLegacyTestsMixin(BaseUDFTestsMixin):
             ):
                 with self.sql_conf({"spark.sql.execution.pythonUDF.arrow.enabled": "true"}):
                     self.assertEqual(
+                        udf(lambda x: str(x), useArrow=None).evalType, PythonEvalType.SQL_ARROW_BATCHED_UDF
+                    )
+                    self.assertEqual(
                         udf(lambda x: str(x), useArrow=True).evalType, PythonEvalType.SQL_ARROW_BATCHED_UDF
                     )
                     self.assertEqual(
                         udf(lambda x: str(x), useArrow=False).evalType, PythonEvalType.SQL_BATCHED_UDF
                     )
                 with self.sql_conf({"spark.sql.execution.pythonUDF.arrow.enabled": "false"}):
+                    self.assertEqual(
+                        udf(lambda x: str(x), useArrow=None).evalType, PythonEvalType.SQL_BATCHED_UDF
+                    )
                     self.assertEqual(
                         udf(lambda x: str(x), useArrow=True).evalType, PythonEvalType.SQL_ARROW_BATCHED_UDF
                     )

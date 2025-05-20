@@ -215,6 +215,7 @@ class ArrowStreamArrowUDFSerializer(ArrowStreamSerializer):
 
     def _create_array(self, arr, arrow_type, arrow_cast):
         import pyarrow as pa
+        import numpy as np
 
         # assert isinstance(arr, pa.Array)
         assert isinstance(arrow_type, pa.DataType)
@@ -222,10 +223,15 @@ class ArrowStreamArrowUDFSerializer(ArrowStreamSerializer):
         # TODO: should we handle timezone here?
 
         try:
-            return arr
+            # Convert numpy types to Python native types
+            if isinstance(arr, pa.Array):
+                arr = arr.to_pylist()
+            elif isinstance(arr, np.ndarray):
+                arr = arr.tolist()
+            return pa.array(arr, type=arrow_type)
         except pa.lib.ArrowException:
             if arrow_cast:
-                return arr.cast(target_type=arrow_type, safe=self._safecheck)
+                return pa.array(arr, type=arrow_type)
             else:
                 raise
 
@@ -263,7 +269,7 @@ class ArrowStreamArrowUDFSerializer(ArrowStreamSerializer):
                     write_int(SpecialLengths.START_ARROW_STREAM, stream)
                     should_write_start_length = False
                 yield batch
-
+                
         return ArrowStreamSerializer.dump_stream(self, wrap_and_init_stream(), stream)
 
     def __repr__(self):

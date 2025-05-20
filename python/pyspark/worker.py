@@ -164,7 +164,7 @@ def wrap_arrow_batch_udf(f, args_offsets, kwargs_offsets, return_type, runner_co
     if use_legacy_pandas_udf_conversion(runner_conf):
         return wrap_arrow_batch_udf_legacy(f, args_offsets, kwargs_offsets, return_type, runner_conf)
     else:
-        return wrap_arrow_batch_udf_legacy(f, args_offsets, kwargs_offsets, return_type, runner_conf)
+        return wrap_arrow_batch_udf_arrow(f, args_offsets, kwargs_offsets, return_type, runner_conf)
 
         # return wrap_arrow_batch_udf_arrow(f, args_offsets, kwargs_offsets, return_type, runner_conf)
 
@@ -204,7 +204,7 @@ def wrap_arrow_batch_udf_arrow(f, args_offsets, kwargs_offsets, return_type, run
                 arg.combine_chunks() if isinstance(arg, pa.ChunkedArray) else arg
                 for arg in args
             ]
-            return zip(*(arr.to_pylist() for arr in arrays))
+            return zip(*(arr.to_pylist() if hasattr(arr, 'to_pylist') else arr.tolist() for arr in arrays))
 
     if "spark.sql.execution.pythonUDF.arrow.concurrency.level" in runner_conf:
         from concurrent.futures import ThreadPoolExecutor
@@ -1903,10 +1903,11 @@ def read_udfs(pickleSer, infile, eval_type):
 
             ser = TransformWithStateInPySparkRowInitStateSerializer(arrow_max_records_per_batch)
         elif eval_type == PythonEvalType.SQL_MAP_ARROW_ITER_UDF:
+            assert False
             ser = ArrowStreamUDFSerializer()
         elif eval_type == PythonEvalType.SQL_GROUPED_MAP_ARROW_UDF:
             ser = ArrowStreamGroupUDFSerializer(_assign_cols_by_name)
-        elif eval_type == PythonEvalType.SQL_ARROW_BATCHED_UDF and use_legacy_pandas_udf_conversion(runner_conf):
+        elif eval_type == PythonEvalType.SQL_ARROW_BATCHED_UDF and not use_legacy_pandas_udf_conversion(runner_conf):
             input_types = (
                 [f.dataType for f in _parse_datatype_json_string(utf8_deserializer.loads(infile))]
                 if eval_type == PythonEvalType.SQL_ARROW_BATCHED_UDF
@@ -1934,6 +1935,10 @@ def read_udfs(pickleSer, infile, eval_type):
                 if eval_type == PythonEvalType.SQL_ARROW_BATCHED_UDF
                 else None
             )
+
+            # print("\n\n **** eval_type: ", eval_type)
+            # print("\n\n **** use_legacy_pandas_udf_conversion(runner_conf): ", use_legacy_pandas_udf_conversion(runner_conf))
+            # assert False
 
             ser = ArrowStreamPandasUDFSerializer(
                 timezone,

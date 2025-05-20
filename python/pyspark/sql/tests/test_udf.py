@@ -1228,7 +1228,10 @@ class BaseUDFTestsMixin(object):
         "pypy" in platform.python_implementation().lower(), "cannot run in environment pypy"
     )
     def test_python_udf_segfault(self):
-        with self.sql_conf({"spark.sql.execution.pyspark.udf.faulthandler.enabled": True}):
+        with self.sql_conf({
+            "spark.sql.execution.pyspark.udf.faulthandler.enabled": True,
+            "spark.sql.execution.pythonUDF.arrow.enabled": False
+        }):
             with self.assertRaisesRegex(Exception, "Segmentation fault"):
                 import ctypes
 
