@@ -199,12 +199,35 @@ def wrap_arrow_batch_udf_arrow(f, args_offsets, kwargs_offsets, return_type, run
                 first_array = first_array.combine_chunks()
             return [() for _ in range(len(first_array))]
     else:
-        def get_args(*args: pa.RecordBatch):
-            arrays = [
-                arg.combine_chunks() if isinstance(arg, pa.ChunkedArray) else arg
-                for arg in args
-            ]
-            return zip(*(arr.to_pylist() if hasattr(arr, 'to_pylist') else arr.tolist() for arr in arrays))
+        # TODO check how to do this?
+        def get_args(*args):
+            arrays = []
+            for arg in args:
+                if hasattr(arg, 'columns'):  # RecordBatch
+                    arrays.extend(arg.columns)
+                elif hasattr(arg, 'combine_chunks'):  # ChunkedArray
+                    arrays.append(arg.combine_chunks())
+                else:
+                    arrays.append(arg)
+            return zip(*(arr.to_pylist() if hasattr(arr, 'to_pylist') else
+                        arr.tolist() if hasattr(arr, 'tolist') else
+                        arr if isinstance(arr, (list, tuple)) else list(arr) for arr in arrays))
+        # def get_args(*args: pa.RecordBatch):
+        #     arrays = []
+        #     for arg in args:
+        #         if isinstance(arg, pa.RecordBatch):
+        #             # For RecordBatch, we need to get the columns
+        #             # Only get the actual data columns, not the type information
+        #             arrays.extend([col for col in arg.columns if not isinstance(col, pa.DataType)])
+        #         elif isinstance(arg, pa.ChunkedArray):
+        #             arrays.append(arg.combine_chunks())
+        #         else:
+        #             arrays.append(arg)
+
+        #     print("\n *** arrays: ", arrays)
+        #     return zip(*(arr.to_pylist() if hasattr(arr, 'to_pylist') else 
+        #                 arr.tolist() if hasattr(arr, 'tolist') else 
+        #                 arr if isinstance(arr, (list, tuple)) else list(arr) for arr in arrays))
 
     if "spark.sql.execution.pythonUDF.arrow.concurrency.level" in runner_conf:
         from concurrent.futures import ThreadPoolExecutor
@@ -1903,7 +1926,6 @@ def read_udfs(pickleSer, infile, eval_type):
 
             ser = TransformWithStateInPySparkRowInitStateSerializer(arrow_max_records_per_batch)
         elif eval_type == PythonEvalType.SQL_MAP_ARROW_ITER_UDF:
-            assert False
             ser = ArrowStreamUDFSerializer()
         elif eval_type == PythonEvalType.SQL_GROUPED_MAP_ARROW_UDF:
             ser = ArrowStreamGroupUDFSerializer(_assign_cols_by_name)
@@ -1913,7 +1935,9 @@ def read_udfs(pickleSer, infile, eval_type):
                 if eval_type == PythonEvalType.SQL_ARROW_BATCHED_UDF
                 else None
             )
-            ser = ArrowStreamArrowUDFSerializer(timezone, safecheck, _assign_cols_by_name, False)
+            # print("\n\n **** input_types: ", input_types)
+            # assert False
+            ser = ArrowStreamArrowUDFSerializer(timezone, safecheck, _assign_cols_by_name, False, input_types)
         else:
             # Scalar Pandas UDF handles struct type arguments as pandas DataFrames instead of
             # pandas Series. See SPARK-27240.
@@ -1935,10 +1959,6 @@ def read_udfs(pickleSer, infile, eval_type):
                 if eval_type == PythonEvalType.SQL_ARROW_BATCHED_UDF
                 else None
             )
-
-            # print("\n\n **** eval_type: ", eval_type)
-            # print("\n\n **** use_legacy_pandas_udf_conversion(runner_conf): ", use_legacy_pandas_udf_conversion(runner_conf))
-            # assert False
 
             ser = ArrowStreamPandasUDFSerializer(
                 timezone,

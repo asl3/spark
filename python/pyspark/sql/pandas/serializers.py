@@ -155,35 +155,106 @@ class ArrowStreamUDFSerializer(ArrowStreamSerializer):
 
     def dump_stream(self, iterator, stream):
         """
-        Override because Pandas UDFs require a START_ARROW_STREAM before the Arrow stream is sent.
+        Override because Arrow UDFs require a START_ARROW_STREAM before the Arrow stream is sent.
         This should be sent after creating the first record batch so in case of an error, it can
         be sent back to the JVM before the Arrow stream starts.
         """
         import pyarrow as pa
+        import ast
+        import json
+        import numpy as np
 
         def wrap_and_init_stream():
             should_write_start_length = True
-            for batch, _ in iterator:
-                assert isinstance(batch, pa.RecordBatch)
-
-                # Wrap the root struct
-                if len(batch.columns) == 0:
-                    # When batch has no column, it should still create
-                    # an empty batch with the number of rows set.
-                    struct = pa.array([{}] * batch.num_rows)
+            for packed in iterator:
+                if isinstance(packed, tuple) and len(packed) == 2 and isinstance(packed[1], pa.DataType):
+                    # single array UDF in a projection
+                    arrs = [self._create_array(packed[0], packed[1], None, self._arrow_cast)]
+                elif isinstance(packed, list):
+                    # multiple array UDFs in a projection
+                    arrs = []
+                    for t in packed:
+                        value = t[0]
+                        arrow_type = t[1]
+                        # Convert value to list if it's not already
+                        if isinstance(value, (np.ndarray, pa.Array)):
+                            value = value.tolist() if isinstance(value, np.ndarray) else value.to_pylist()
+                        arrs.append(self._create_array(value, arrow_type, None, self._arrow_cast))
+                elif isinstance(packed, tuple) and len(packed) == 3:
+                    # single value UDF with type information
+                    value, arrow_type, spark_type = packed
+                    
+                    # Handle string representations of complex types
+                    if isinstance(value, str):
+                        try:
+                            # First try to parse as JSON
+                            parsed_value = json.loads(value)
+                            value = parsed_value
+                        except json.JSONDecodeError:
+                            try:
+                                # If JSON fails, try to parse as Python literal
+                                parsed_value = ast.literal_eval(value)
+                                value = parsed_value
+                            except (ValueError, SyntaxError):
+                                # If both fail, keep the original string value
+                                pass
+                    
+                    # Ensure arrow_type is a pa.DataType
+                    if not isinstance(arrow_type, pa.DataType):
+                        try:
+                            arrow_type = to_arrow_type(spark_type)
+                        except PySparkTypeError:
+                            # If conversion fails, try to infer the type from the value
+                            if isinstance(value, dict):
+                                # For dictionaries, create a struct type
+                                arrow_type = pa.struct([
+                                    pa.field(k, pa.infer_type(v))
+                                    for k, v in value.items()
+                                ])
+                            elif isinstance(value, tuple):
+                                # For tuples, create a struct type with fields for each element
+                                arrow_type = pa.struct([
+                                    pa.field(f"item{i}", pa.infer_type(v))
+                                    for i, v in enumerate(value)
+                                ])
+                            elif isinstance(value, pa.DataType):
+                                # If value is already a DataType, use it directly
+                                arrow_type = value
+                            else:
+                                try:
+                                    arrow_type = pa.infer_type(value)
+                                except pa.lib.ArrowInvalid:
+                                    # If inference fails, default to string type
+                                    arrow_type = pa.string()
+                    
+                    # Handle the case where value is already a DataType
+                    if isinstance(value, pa.DataType):
+                        value = str(value)
+                    # Handle tuple values by converting to dict
+                    elif isinstance(value, tuple):
+                        value = {f"item{i}": v for i, v in enumerate(value)}
+                    
+                    try:
+                        arr = pa.array([value], type=arrow_type)
+                    except pa.lib.ArrowTypeError:
+                        # If array creation fails, try to convert to string
+                        arr = pa.array([str(value)], type=pa.string())
+                    
+                    arrs = [self._create_array(arr, arrow_type, spark_type, self._arrow_cast)]
                 else:
-                    struct = pa.StructArray.from_arrays(
-                        batch.columns, fields=pa.struct(list(batch.schema))
-                    )
-                batch = pa.RecordBatch.from_arrays([struct], ["_0"])
+                    # single value UDF without type information
+                    arr = pa.array([packed], type=pa.int32())
+                    arrs = [self._create_array(arr, pa.int32(), None, self._arrow_cast)]
+
+                batch = pa.RecordBatch.from_arrays(arrs, ["_%d" % i for i in range(len(arrs))])
 
                 # Write the first record batch with initialization.
                 if should_write_start_length:
                     write_int(SpecialLengths.START_ARROW_STREAM, stream)
                     should_write_start_length = False
                 yield batch
-
-        return super(ArrowStreamUDFSerializer, self).dump_stream(wrap_and_init_stream(), stream)
+                
+        return ArrowStreamSerializer.dump_stream(self, wrap_and_init_stream(), stream)
 
 
 class ArrowStreamUDTFSerializer(ArrowStreamUDFSerializer):
@@ -206,21 +277,114 @@ class ArrowStreamArrowUDFSerializer(ArrowStreamSerializer):
             safecheck,
             assign_cols_by_name,
             arrow_cast,
+            input_types
     ):
         super(ArrowStreamArrowUDFSerializer, self).__init__()
         self._timezone = timezone
         self._safecheck = safecheck
         self._assign_cols_by_name = assign_cols_by_name
         self._arrow_cast = arrow_cast
+        self._input_types = input_types
 
-    def _create_array(self, arr, arrow_type, arrow_cast):
+    def load_stream(self, stream):
+        """
+        Load Arrow record batches from stream and flatten them into individual columns.
+        """
+        import pyarrow as pa
+
+        batches = super(ArrowStreamArrowUDFSerializer, self).load_stream(stream)
+        for batch in batches:
+            # Flatten the struct into individual columns
+            if isinstance(batch, pa.RecordBatch):
+                struct = batch.column(0)
+                if pa.types.is_struct(struct.type):
+                    # For each field in the struct, create a tuple of (value, arrow_type, spark_type)
+                    for i, field in enumerate(struct.type):
+                        value = struct.field(i).to_pylist()
+                        arrow_type = field.type
+                        spark_type = self._input_types[i] if self._input_types is not None else None
+                        yield (value, arrow_type, spark_type)
+                else:
+                    # If not a struct, yield the entire column
+                    value = struct.to_pylist()
+                    arrow_type = struct.type
+                    spark_type = self._input_types[0] if self._input_types is not None else None
+                    yield (value, arrow_type, spark_type)
+
+    def arrow_to_pandas(self, arrow_column, idx):
+        """
+        Convert an Arrow column to pandas format, handling complex types appropriately.
+
+        Parameters
+        ----------
+        arrow_column : pyarrow.Array
+            The Arrow array to convert
+        idx : int
+            Index of the column
+
+        Returns
+        -------
+        pandas.Series
+            The converted pandas Series
+        """
+        import pyarrow.types as types
+        import pandas as pd
+
+        # If the arrow type is struct, return a pandas dataframe where the fields of the struct
+        # correspond to columns in the DataFrame. However, if the arrow struct is actually a
+        # Variant, which is an atomic type, treat it as a non-struct arrow type.
+        if (
+            types.is_struct(arrow_column.type)
+            and not is_variant(arrow_column.type)
+        ):
+            series = [
+                self.arrow_to_pandas(
+                    column,
+                    i,
+                )
+                .rename(field.name)
+                for i, (column, field) in enumerate(zip(arrow_column.flatten(), arrow_column.type))
+            ]
+            s = pd.concat(series, axis=1)
+        else:
+            # For non-struct types, use the base conversion
+            s = arrow_column.to_pandas()
+            if self._input_types is not None:
+                spark_type = self._input_types[idx]
+                if spark_type is not None:
+                    converter = _create_converter_to_pandas(
+                        data_type=spark_type,
+                        nullable=True,
+                        timezone=self._timezone,
+                        error_on_duplicated_field_names=True,
+                    )
+                    s = converter(s)
+        return s
+
+    def _create_array(self, arr, arrow_type, spark_type=None, arrow_cast=False):
+        """
+        Create an Arrow Array from the given array and optional type.
+
+        Parameters
+        ----------
+        arr : array-like
+            The input array to convert
+        arrow_type : pyarrow.DataType, optional
+            If None, pyarrow's inferred type will be used
+        spark_type : DataType, optional
+            If None, spark type converted from arrow_type will be used
+        arrow_cast: bool, optional
+            Whether to apply Arrow casting when the user-specified return type mismatches the
+            actual return values.
+
+        Returns
+        -------
+        pyarrow.Array
+        """
         import pyarrow as pa
         import numpy as np
 
-        # assert isinstance(arr, pa.Array)
         assert isinstance(arrow_type, pa.DataType)
-
-        # TODO: should we handle timezone here?
 
         try:
             # Convert numpy types to Python native types
@@ -228,6 +392,16 @@ class ArrowStreamArrowUDFSerializer(ArrowStreamSerializer):
                 arr = arr.to_pylist()
             elif isinstance(arr, np.ndarray):
                 arr = arr.tolist()
+
+            # If we have a spark type, use it to create the array
+            if spark_type is not None:
+                converter = _create_converter_from_pandas(
+                    spark_type,
+                    timezone=self._timezone,
+                    error_on_duplicated_field_names=False,
+                )
+                arr = converter(arr)
+
             return pa.array(arr, type=arrow_type)
         except pa.lib.ArrowException:
             if arrow_cast:
@@ -242,25 +416,91 @@ class ArrowStreamArrowUDFSerializer(ArrowStreamSerializer):
         be sent back to the JVM before the Arrow stream starts.
         """
         import pyarrow as pa
+        import ast
+        import json
+        import numpy as np
 
         def wrap_and_init_stream():
             should_write_start_length = True
             for packed in iterator:
                 if isinstance(packed, tuple) and len(packed) == 2 and isinstance(packed[1], pa.DataType):
                     # single array UDF in a projection
-                    arrs = [self._create_array(packed[0], packed[1], self._arrow_cast)]
+                    arrs = [self._create_array(packed[0], packed[1], None, self._arrow_cast)]
                 elif isinstance(packed, list):
                     # multiple array UDFs in a projection
-                    arrs = [self._create_array(t[0], t[1], self._arrow_cast) for t in packed]
+                    arrs = []
+                    for t in packed:
+                        value = t[0]
+                        arrow_type = t[1]
+                        # Convert value to list if it's not already
+                        if isinstance(value, (np.ndarray, pa.Array)):
+                            value = value.tolist() if isinstance(value, np.ndarray) else value.to_pylist()
+                        arrs.append(self._create_array(value, arrow_type, None, self._arrow_cast))
                 elif isinstance(packed, tuple) and len(packed) == 3:
                     # single value UDF with type information
                     value, arrow_type, spark_type = packed
-                    arr = pa.array(value, type=arrow_type)
-                    arrs = [self._create_array(arr, arrow_type, self._arrow_cast)]
+                    
+                    # Handle string representations of complex types
+                    if isinstance(value, str):
+                        try:
+                            # First try to parse as JSON
+                            parsed_value = json.loads(value)
+                            value = parsed_value
+                        except json.JSONDecodeError:
+                            try:
+                                # If JSON fails, try to parse as Python literal
+                                parsed_value = ast.literal_eval(value)
+                                value = parsed_value
+                            except (ValueError, SyntaxError):
+                                # If both fail, keep the original string value
+                                pass
+                    
+                    # Ensure arrow_type is a pa.DataType
+                    if not isinstance(arrow_type, pa.DataType):
+                        try:
+                            arrow_type = to_arrow_type(spark_type)
+                        except PySparkTypeError:
+                            # If conversion fails, try to infer the type from the value
+                            if isinstance(value, dict):
+                                # For dictionaries, create a struct type
+                                arrow_type = pa.struct([
+                                    pa.field(k, pa.infer_type(v))
+                                    for k, v in value.items()
+                                ])
+                            elif isinstance(value, tuple):
+                                # For tuples, create a struct type with fields for each element
+                                arrow_type = pa.struct([
+                                    pa.field(f"item{i}", pa.infer_type(v))
+                                    for i, v in enumerate(value)
+                                ])
+                            elif isinstance(value, pa.DataType):
+                                # If value is already a DataType, use it directly
+                                arrow_type = value
+                            else:
+                                try:
+                                    arrow_type = pa.infer_type(value)
+                                except pa.lib.ArrowInvalid:
+                                    # If inference fails, default to string type
+                                    arrow_type = pa.string()
+                    
+                    # Handle the case where value is already a DataType
+                    if isinstance(value, pa.DataType):
+                        value = str(value)
+                    # Handle tuple values by converting to dict
+                    elif isinstance(value, tuple):
+                        value = {f"item{i}": v for i, v in enumerate(value)}
+                    
+                    try:
+                        arr = pa.array([value], type=arrow_type)
+                    except pa.lib.ArrowTypeError:
+                        # If array creation fails, try to convert to string
+                        arr = pa.array([str(value)], type=pa.string())
+                    
+                    arrs = [self._create_array(arr, arrow_type, spark_type, self._arrow_cast)]
                 else:
                     # single value UDF without type information
                     arr = pa.array([packed], type=pa.int32())
-                    arrs = [self._create_array(arr, pa.int32(), self._arrow_cast)]
+                    arrs = [self._create_array(arr, pa.int32(), None, self._arrow_cast)]
 
                 batch = pa.RecordBatch.from_arrays(arrs, ["_%d" % i for i in range(len(arrs))])
 
@@ -1385,7 +1625,7 @@ class TransformWithStateInPandasSerializer(ArrowStreamPandasUDFSerializer):
                 for pdf in iter_pdf:
                     yield (pdf, pdf_type)
 
-        super().dump_stream(flatten_iterator(), stream)
+        return ArrowStreamPandasSerializer.dump_stream(self, flatten_iterator(), stream)
 
 
 class TransformWithStateInPandasInitStateSerializer(TransformWithStateInPandasSerializer):
@@ -1468,7 +1708,24 @@ class TransformWithStateInPandasInitStateSerializer(TransformWithStateInPandasSe
         data_batches = generate_data_batches(_batches)
 
         for k, g in groupby(data_batches, key=lambda x: x[0]):
-            yield (TransformWithStateInPandasFuncMode.PROCESS_DATA, k, g)
+            # g: list(batch_key, input_data_iter, init_state_iter)
+
+            # they are sharing the iterator, hence need to copy
+            input_values_iter, init_state_iter = itertools.tee(g, 2)
+
+            chained_input_values = itertools.chain(map(lambda x: x[1], input_values_iter))
+            chained_init_state_values = itertools.chain(map(lambda x: x[2], init_state_iter))
+
+            chained_input_values_without_none = filter(
+                lambda x: x is not None, chained_input_values
+            )
+            chained_init_state_values_without_none = filter(
+                lambda x: x is not None, chained_init_state_values
+            )
+
+            ret_tuple = (chained_input_values_without_none, chained_init_state_values_without_none)
+
+            yield (TransformWithStateInPandasFuncMode.PROCESS_DATA, k, ret_tuple)
 
         yield (TransformWithStateInPandasFuncMode.PROCESS_TIMER, None, None)
 
