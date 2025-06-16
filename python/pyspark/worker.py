@@ -166,8 +166,6 @@ def wrap_arrow_batch_udf(f, args_offsets, kwargs_offsets, return_type, runner_co
     else:
         return wrap_arrow_batch_udf_arrow(f, args_offsets, kwargs_offsets, return_type, runner_conf)
 
-        # return wrap_arrow_batch_udf_arrow(f, args_offsets, kwargs_offsets, return_type, runner_conf)
-
 def wrap_arrow_batch_udf_arrow(f, args_offsets, kwargs_offsets, return_type, runner_conf):
     import pyarrow as pa
 
@@ -206,38 +204,23 @@ def wrap_arrow_batch_udf_arrow(f, args_offsets, kwargs_offsets, return_type, run
             ]
             return zip(*(arr.to_pylist() if hasattr(arr, 'to_pylist') else arr.tolist() for arr in arrays))
 
-    if "spark.sql.execution.pythonUDF.arrow.concurrency.level" in runner_conf:
-        from concurrent.futures import ThreadPoolExecutor
+    @fail_on_stopiteration
+    def evaluate(*args: pa.RecordBatch):
+        results = [result_func(func(*row)) for row in get_args(*args)]
+        arr = pa.array(results, type=arrow_return_type)
+        return (arr, arrow_return_type)
 
-        c = int(runner_conf["spark.sql.execution.pythonUDF.arrow.concurrency.level"])
-
-        @fail_on_stopiteration
-        def evaluate(*args: pa.RecordBatch) -> pa.RecordBatch:
-            results = [result_func(func(*row)) for row in get_args(*args)]
-            return results
-
-    else:
-
-        @fail_on_stopiteration
-        def evaluate(*args: pa.RecordBatch) -> pa.RecordBatch:
-            results = [result_func(func(*row)) for row in get_args(*args)]
-            return results
-
-    def verify_result_length(result: pa.RecordBatch, length: int) -> pa.RecordBatch:
-        if len(result) != length:
-            raise PySparkRuntimeError(
-                errorClass="SCHEMA_MISMATCH_FOR_PANDAS_UDF",
-                messageParameters={
-                    "udf_type": "arrow_batch_udf",
-                    "expected": str(length),
-                    "actual": str(len(result)),
-                },
-            )
-        return result
+    def make_output(*a):
+        out = evaluate(*a)
+        # If already a list of tuples, return as is; else wrap in a list
+        if isinstance(out, list):
+            return out
+        else:
+            return [out]
 
     return (
         args_kwargs_offsets,
-        lambda *a: (verify_result_length(evaluate(*a), len(a[0])), arrow_return_type, return_type),
+        make_output,
     )
 
 def wrap_arrow_batch_udf_legacy(f, args_offsets, kwargs_offsets, return_type, runner_conf):
@@ -2330,9 +2313,10 @@ def read_udfs(pickleSer, infile, eval_type):
             )
 
         def mapper(a):
+            if hasattr(a, 'num_columns') and a.num_columns == 0:
+                # Return an empty result or None as appropriate
+                return None
             result = tuple(f(*[a[o] for o in arg_offsets]) for arg_offsets, f in udfs)
-            # In the special case of a single UDF this will return a single result rather
-            # than a tuple of results; this is the format that the JVM side expects.
             if len(result) == 1:
                 return result[0]
             else:

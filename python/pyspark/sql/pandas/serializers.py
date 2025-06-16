@@ -163,19 +163,26 @@ class ArrowStreamUDFSerializer(ArrowStreamSerializer):
 
         def wrap_and_init_stream():
             should_write_start_length = True
-            for batch, _ in iterator:
-                assert isinstance(batch, pa.RecordBatch)
-
-                # Wrap the root struct
-                if len(batch.columns) == 0:
-                    # When batch has no column, it should still create
-                    # an empty batch with the number of rows set.
-                    struct = pa.array([{}] * batch.num_rows)
+            for packed in iterator:
+                # Flatten tuple of lists to a single list if needed
+                if isinstance(packed, tuple) and all(isinstance(x, list) for x in packed):
+                    packed = [item for sublist in packed for item in sublist]
+                if isinstance(packed, tuple) and len(packed) == 2 and isinstance(packed[1], pa.DataType):
+                    # single array UDF in a projection
+                    arrs = [self._create_array(packed[0], packed[1], self._arrow_cast)]
+                elif isinstance(packed, list):
+                    # multiple array UDFs in a projection
+                    arrs = [self._create_array(t[0], t[1], self._arrow_cast) for t in packed]
+                elif isinstance(packed, tuple) and len(packed) == 3:
+                    # single value UDF with type information
+                    value, arrow_type, spark_type = packed
+                    arr = pa.array(value, type=arrow_type)
+                    arrs = [self._create_array(arr, arrow_type, self._arrow_cast)]
                 else:
-                    struct = pa.StructArray.from_arrays(
-                        batch.columns, fields=pa.struct(list(batch.schema))
-                    )
-                batch = pa.RecordBatch.from_arrays([struct], ["_0"])
+                    arr = pa.array([packed], type=pa.int32())
+                    arrs = [self._create_array(arr, pa.int32(), self._arrow_cast)]
+
+                batch = pa.RecordBatch.from_arrays(arrs, ["_%d" % i for i in range(len(arrs))])
 
                 # Write the first record batch with initialization.
                 if should_write_start_length:
@@ -201,59 +208,31 @@ class ArrowStreamArrowUDFSerializer(ArrowStreamSerializer):
     """
 
     def __init__(
-            self,
-            timezone,
-            safecheck,
-            assign_cols_by_name,
-            arrow_cast,
+        self,
+        timezone,
+        safecheck,
+        assign_cols_by_name,
+        arrow_cast,
     ):
         super(ArrowStreamArrowUDFSerializer, self).__init__()
         self._timezone = timezone
         self._safecheck = safecheck
         self._assign_cols_by_name = assign_cols_by_name
         self._arrow_cast = arrow_cast
-        
-    def _arrow_to_spark_python(self, value, spark_type):
-        # Recursively convert Arrow to Spark Python types (dict, Row, etc.)
-        from pyspark.sql.types import MapType, StructType, ArrayType, Row
-        if isinstance(spark_type, MapType):
-            if value is None:
-                return None
-            # Arrow MapType to dict
-            return {self._arrow_to_spark_python(k, spark_type.keyType): self._arrow_to_spark_python(v, spark_type.valueType) for k, v in value}
-        elif isinstance(spark_type, StructType):
-            if value is None:
-                return None
-            # Arrow StructType to Row
-            return Row(**{f.name: self._arrow_to_spark_python(value.get(f.name), f.dataType) for f in spark_type.fields})
-        elif isinstance(spark_type, ArrayType):
-            if value is None:
-                return None
-            # Arrow ArrayType to list
-            return [self._arrow_to_spark_python(x, spark_type.elementType) for x in value]
-        else:
-            return value
 
-    def _create_array(self, arr, arrow_type, arrow_cast, spark_type=None):
+    def _create_array(self, arr, arrow_type, arrow_cast):
         import pyarrow as pa
-        import numpy as np
-        from pyspark.sql.pandas.types import from_arrow_type
 
-        assert isinstance(arrow_type, pa.DataType)
+        assert(isinstance(arr, pa.Array), arr)
+        assert(isinstance(arrow_type, pa.DataType), arrow_type)
+
+        # TODO: should we handle timezone here?
 
         try:
-            # Recursively convert using spark_type if available
-            if spark_type is not None:
-                arr = [self._arrow_to_spark_python(x, spark_type) for x in arr]
-            # Convert numpy types to Python native types
-            elif isinstance(arr, pa.Array):
-                arr = arr.to_pylist()
-            elif isinstance(arr, np.ndarray):
-                arr = arr.tolist()
-            return pa.array(arr, type=arrow_type)
+            return arr
         except pa.lib.ArrowException:
             if arrow_cast:
-                return pa.array(arr, type=arrow_type)
+                return arr.cast(target_type=arrow_type, safe=self._safecheck)
             else:
                 raise
 
@@ -268,16 +247,21 @@ class ArrowStreamArrowUDFSerializer(ArrowStreamSerializer):
         def wrap_and_init_stream():
             should_write_start_length = True
             for packed in iterator:
+                # Flatten tuple of lists to a single list if needed
+                if isinstance(packed, tuple) and all(isinstance(x, list) for x in packed):
+                    packed = [item for sublist in packed for item in sublist]
                 if isinstance(packed, tuple) and len(packed) == 2 and isinstance(packed[1], pa.DataType):
+                    # single array UDF in a projection
                     arrs = [self._create_array(packed[0], packed[1], self._arrow_cast)]
                 elif isinstance(packed, list):
-                    arrs = [self._create_array(t[0], t[1], self._arrow_cast, t[2] if len(t) > 2 else None) for t in packed]
+                    # multiple array UDFs in a projection
+                    arrs = [self._create_array(t[0], t[1], self._arrow_cast) for t in packed]
                 elif isinstance(packed, tuple) and len(packed) == 3:
+                    # single value UDF with type information
                     value, arrow_type, spark_type = packed
                     arr = pa.array(value, type=arrow_type)
-                    arrs = [self._create_array(arr, arrow_type, self._arrow_cast, spark_type)]
+                    arrs = [self._create_array(arr, arrow_type, self._arrow_cast)]
                 else:
-                    # single value UDF without type information
                     arr = pa.array([packed], type=pa.int32())
                     arrs = [self._create_array(arr, pa.int32(), self._arrow_cast)]
 
@@ -293,7 +277,6 @@ class ArrowStreamArrowUDFSerializer(ArrowStreamSerializer):
 
     def __repr__(self):
         return "ArrowStreamArrowUDFSerializer"
-
 
 class ArrowStreamGroupUDFSerializer(ArrowStreamUDFSerializer):
     """
