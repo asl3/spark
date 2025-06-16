@@ -141,13 +141,11 @@ class ArrowStreamUDFSerializer(ArrowStreamSerializer):
     Same as :class:`ArrowStreamSerializer` but it flattens the struct to Arrow record batch
     for applying each function with the raw record arrow batch. See also `DataFrame.mapInArrow`.
     """
-
     def load_stream(self, stream):
         """
         Flatten the struct into Arrow's record batches.
         """
         import pyarrow as pa
-
         batches = super(ArrowStreamUDFSerializer, self).load_stream(stream)
         for batch in batches:
             struct = batch.column(0)
@@ -163,34 +161,19 @@ class ArrowStreamUDFSerializer(ArrowStreamSerializer):
 
         def wrap_and_init_stream():
             should_write_start_length = True
-            for packed in iterator:
-                # Flatten tuple of lists to a single list if needed
-                if isinstance(packed, tuple) and all(isinstance(x, list) for x in packed):
-                    packed = [item for sublist in packed for item in sublist]
-                if isinstance(packed, tuple) and len(packed) == 2 and isinstance(packed[1], pa.DataType):
-                    # single array UDF in a projection
-                    arrs = [self._create_array(packed[0], packed[1], self._arrow_cast)]
-                elif isinstance(packed, list):
-                    # multiple array UDFs in a projection
-                    arrs = [self._create_array(t[0], t[1], self._arrow_cast) for t in packed]
-                elif isinstance(packed, tuple) and len(packed) == 3:
-                    # single value UDF with type information
-                    value, arrow_type, spark_type = packed
-                    arr = pa.array(value, type=arrow_type)
-                    arrs = [self._create_array(arr, arrow_type, self._arrow_cast)]
+            for batch, _ in iterator:
+                assert isinstance(batch, pa.RecordBatch)
+
+                # Wrap the root struct
+                if len(batch.columns) == 0:
+                    # When batch has no column, it should still create
+                    # an empty batch with the number of rows set.
+                    struct = pa.array([{}] * batch.num_rows)
                 else:
-                    arr = pa.array([packed], type=pa.int32())
-                    arrs = [self._create_array(arr, pa.int32(), self._arrow_cast)]
-
-                batch = pa.RecordBatch.from_arrays(arrs, ["_%d" % i for i in range(len(arrs))])
-
-                # Write the first record batch with initialization.
-                if should_write_start_length:
-                    write_int(SpecialLengths.START_ARROW_STREAM, stream)
-                    should_write_start_length = False
-                yield batch
-
-        return super(ArrowStreamUDFSerializer, self).dump_stream(wrap_and_init_stream(), stream)
+                    struct = pa.StructArray.from_arrays(
+                        batch.columns, fields=pa.struct(list(batch.schema))
+                    )
+                batch = pa.RecordBatch.from_arrays([struct], ["_0"])
 
 
 class ArrowStreamUDTFSerializer(ArrowStreamUDFSerializer):
