@@ -212,19 +212,41 @@ class ArrowStreamArrowUDFSerializer(ArrowStreamSerializer):
         self._safecheck = safecheck
         self._assign_cols_by_name = assign_cols_by_name
         self._arrow_cast = arrow_cast
+        
+    def _arrow_to_spark_python(self, value, spark_type):
+        # Recursively convert Arrow to Spark Python types (dict, Row, etc.)
+        from pyspark.sql.types import MapType, StructType, ArrayType, Row
+        if isinstance(spark_type, MapType):
+            if value is None:
+                return None
+            # Arrow MapType to dict
+            return {self._arrow_to_spark_python(k, spark_type.keyType): self._arrow_to_spark_python(v, spark_type.valueType) for k, v in value}
+        elif isinstance(spark_type, StructType):
+            if value is None:
+                return None
+            # Arrow StructType to Row
+            return Row(**{f.name: self._arrow_to_spark_python(value.get(f.name), f.dataType) for f in spark_type.fields})
+        elif isinstance(spark_type, ArrayType):
+            if value is None:
+                return None
+            # Arrow ArrayType to list
+            return [self._arrow_to_spark_python(x, spark_type.elementType) for x in value]
+        else:
+            return value
 
-    def _create_array(self, arr, arrow_type, arrow_cast):
+    def _create_array(self, arr, arrow_type, arrow_cast, spark_type=None):
         import pyarrow as pa
         import numpy as np
+        from pyspark.sql.pandas.types import from_arrow_type
 
-        # assert isinstance(arr, pa.Array)
         assert isinstance(arrow_type, pa.DataType)
 
-        # TODO: should we handle timezone here?
-
         try:
+            # Recursively convert using spark_type if available
+            if spark_type is not None:
+                arr = [self._arrow_to_spark_python(x, spark_type) for x in arr]
             # Convert numpy types to Python native types
-            if isinstance(arr, pa.Array):
+            elif isinstance(arr, pa.Array):
                 arr = arr.to_pylist()
             elif isinstance(arr, np.ndarray):
                 arr = arr.tolist()
@@ -247,18 +269,14 @@ class ArrowStreamArrowUDFSerializer(ArrowStreamSerializer):
             should_write_start_length = True
             for packed in iterator:
                 if isinstance(packed, tuple) and len(packed) == 2 and isinstance(packed[1], pa.DataType):
-                    # single array UDF in a projection
                     arrs = [self._create_array(packed[0], packed[1], self._arrow_cast)]
                 elif isinstance(packed, list):
-                    # multiple array UDFs in a projection
-                    arrs = [self._create_array(t[0], t[1], self._arrow_cast) for t in packed]
+                    arrs = [self._create_array(t[0], t[1], self._arrow_cast, t[2] if len(t) > 2 else None) for t in packed]
                 elif isinstance(packed, tuple) and len(packed) == 3:
-                    # single value UDF with type information
                     value, arrow_type, spark_type = packed
                     arr = pa.array(value, type=arrow_type)
-                    arrs = [self._create_array(arr, arrow_type, self._arrow_cast)]
+                    arrs = [self._create_array(arr, arrow_type, self._arrow_cast, spark_type)]
                 else:
-                    # assert(False, "Invalid packed value: " + str(packed))
                     # single value UDF without type information
                     arr = pa.array([packed], type=pa.int32())
                     arrs = [self._create_array(arr, pa.int32(), self._arrow_cast)]
@@ -271,8 +289,6 @@ class ArrowStreamArrowUDFSerializer(ArrowStreamSerializer):
                     should_write_start_length = False
                 yield batch
 
-        # batches = (self._create_array())
-        # return ArrowStreamArrowUDFSerializer.
         return ArrowStreamSerializer.dump_stream(self, wrap_and_init_stream(), stream)
 
     def __repr__(self):

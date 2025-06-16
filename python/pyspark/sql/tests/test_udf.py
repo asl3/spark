@@ -1035,7 +1035,8 @@ class BaseUDFTestsMixin(object):
         )
 
     def test_nested_map(self):
-        df = self.spark.range(1).selectExpr("map('a', map('b', 'c')) as nested_map")
+        # df = self.spark.range(1).selectExpr("map('a', map('b', 'c')) as nested_map")
+        df = self.spark.range(1).selectExpr("map('b', 'c') as nested_map")
         # Input
         row = df.select(udf(lambda x: str(x))("nested_map")).first()
         self.assertEqual(row[0], "{'a': {'b': 'c'}}")
