@@ -179,11 +179,6 @@ def wrap_arrow_batch_udf_arrow(f, args_offsets, kwargs_offsets, return_type, run
         return_type, prefers_large_types=use_large_var_types(runner_conf)
     )
 
-    # "result_func" ensures the result of a Python UDF to be consistent with/without Arrow
-    # optimization.
-    # Otherwise, an Arrow-optimized Python UDF raises "pyarrow.lib.ArrowTypeError: Expected a
-    # string or bytes dtype, got ..." whereas a non-Arrow-optimized Python UDF returns
-    # successfully.
     result_func = lambda pdf: pdf  # noqa: E731
     if type(return_type) == StringType:
         result_func = lambda r: str(r) if r is not None else r  # noqa: E731
@@ -1886,7 +1881,6 @@ def read_udfs(pickleSer, infile, eval_type):
 
             ser = TransformWithStateInPySparkRowInitStateSerializer(arrow_max_records_per_batch)
         elif eval_type == PythonEvalType.SQL_MAP_ARROW_ITER_UDF:
-            assert False
             ser = ArrowStreamUDFSerializer()
         elif eval_type == PythonEvalType.SQL_GROUPED_MAP_ARROW_UDF:
             ser = ArrowStreamGroupUDFSerializer(_assign_cols_by_name)
@@ -1918,10 +1912,6 @@ def read_udfs(pickleSer, infile, eval_type):
                 if eval_type == PythonEvalType.SQL_ARROW_BATCHED_UDF
                 else None
             )
-
-            # print("\n\n **** eval_type: ", eval_type)
-            # print("\n\n **** use_legacy_pandas_udf_conversion(runner_conf): ", use_legacy_pandas_udf_conversion(runner_conf))
-            # assert False
 
             ser = ArrowStreamPandasUDFSerializer(
                 timezone,
@@ -2317,6 +2307,8 @@ def read_udfs(pickleSer, infile, eval_type):
                 # Return an empty result or None as appropriate
                 return None
             result = tuple(f(*[a[o] for o in arg_offsets]) for arg_offsets, f in udfs)
+            # In the special case of a single UDF this will return a single result rather
+            # than a tuple of results; this is the format that the JVM side expects.
             if len(result) == 1:
                 return result[0]
             else:

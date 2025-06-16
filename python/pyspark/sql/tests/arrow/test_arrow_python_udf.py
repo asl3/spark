@@ -89,9 +89,7 @@ class ArrowPythonUDFTestsMixin(BaseUDFTestsMixin):
             .first()
         )
 
-        # # Both representations are valid - one with native Python types and one with NumPy types
-        # self.assertIn(row_true[0], ["[1, 2, 3]", "[np.int32(1), np.int32(2), np.int32(3)]"])
-        # self.assertIn(row_none[0], ["[1, 2, 3]", "[np.int32(1), np.int32(2), np.int32(3)]"])
+        self.assertEqual(row_true[0], row_none[0]) # "[1, 2, 3]"
 
         # useArrow=False
         row_false = (
