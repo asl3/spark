@@ -141,11 +141,13 @@ class ArrowStreamUDFSerializer(ArrowStreamSerializer):
     Same as :class:`ArrowStreamSerializer` but it flattens the struct to Arrow record batch
     for applying each function with the raw record arrow batch. See also `DataFrame.mapInArrow`.
     """
+
     def load_stream(self, stream):
         """
         Flatten the struct into Arrow's record batches.
         """
         import pyarrow as pa
+
         batches = super(ArrowStreamUDFSerializer, self).load_stream(stream)
         for batch in batches:
             struct = batch.column(0)
@@ -174,6 +176,14 @@ class ArrowStreamUDFSerializer(ArrowStreamSerializer):
                         batch.columns, fields=pa.struct(list(batch.schema))
                     )
                 batch = pa.RecordBatch.from_arrays([struct], ["_0"])
+
+                # Write the first record batch with initialization.
+                if should_write_start_length:
+                    write_int(SpecialLengths.START_ARROW_STREAM, stream)
+                    should_write_start_length = False
+                yield batch
+
+        return super(ArrowStreamUDFSerializer, self).dump_stream(wrap_and_init_stream(), stream)
 
 
 class ArrowStreamUDTFSerializer(ArrowStreamUDFSerializer):

@@ -202,7 +202,17 @@ def wrap_arrow_batch_udf_arrow(f, args_offsets, kwargs_offsets, return_type, run
     @fail_on_stopiteration
     def evaluate(*args: pa.RecordBatch):
         results = [result_func(func(*row)) for row in get_args(*args)]
-        arr = pa.array(results, type=arrow_return_type)
+        try:
+            arr = pa.array(results, type=arrow_return_type)
+        except (pa.lib.ArrowInvalid, pa.lib.ArrowTypeError) as e:
+            raise PySparkRuntimeError(
+                errorClass="UDF_ARROW_TYPE_CONVERSION_ERROR",
+                messageParameters={
+                    "value": str(results),
+                    "arrow_type": str(arrow_return_type),
+                    "error": str(e),
+                },
+            ) from e
         return (arr, arrow_return_type)
 
     def make_output(*a):
