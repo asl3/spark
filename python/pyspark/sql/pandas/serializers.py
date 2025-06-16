@@ -258,6 +258,7 @@ class ArrowStreamArrowUDFSerializer(ArrowStreamSerializer):
                     arr = pa.array(value, type=arrow_type)
                     arrs = [self._create_array(arr, arrow_type, self._arrow_cast)]
                 else:
+                    # assert(False, "Invalid packed value: " + str(packed))
                     # single value UDF without type information
                     arr = pa.array([packed], type=pa.int32())
                     arrs = [self._create_array(arr, pa.int32(), self._arrow_cast)]
@@ -269,7 +270,9 @@ class ArrowStreamArrowUDFSerializer(ArrowStreamSerializer):
                     write_int(SpecialLengths.START_ARROW_STREAM, stream)
                     should_write_start_length = False
                 yield batch
-                
+
+        # batches = (self._create_array())
+        # return ArrowStreamArrowUDFSerializer.
         return ArrowStreamSerializer.dump_stream(self, wrap_and_init_stream(), stream)
 
     def __repr__(self):
