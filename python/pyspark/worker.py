@@ -172,7 +172,7 @@ def wrap_arrow_batch_udf_arrow(f, args_offsets, kwargs_offsets, return_type, run
     func, args_kwargs_offsets = wrap_kwargs_support(f, args_offsets, kwargs_offsets)
     zero_arg_exec = False
     if len(args_kwargs_offsets) == 0:
-        args_kwargs_offsets = (0,)  # Series([pyspark._NoValue, ...]) is used for 0-arg execution.
+        args_kwargs_offsets = (0,)
         zero_arg_exec = True
 
     arrow_return_type = to_arrow_type(
@@ -217,7 +217,6 @@ def wrap_arrow_batch_udf_arrow(f, args_offsets, kwargs_offsets, return_type, run
 
     def make_output(*a):
         out = evaluate(*a)
-        # If already a list of tuples, return as is; else wrap in a list
         if isinstance(out, list):
             return out
         else:
