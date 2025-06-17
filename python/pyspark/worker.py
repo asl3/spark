@@ -187,10 +187,12 @@ def wrap_arrow_batch_udf_arrow(f, args_offsets, kwargs_offsets, return_type, run
 
     if zero_arg_exec:
         def get_args(*args: pa.RecordBatch):
-            first_array = args[0]
-            if isinstance(first_array, pa.ChunkedArray):
-                first_array = first_array.combine_chunks()
-            return [() for _ in range(len(first_array))]
+            if len(args) > 0:
+                # args[0] is a pyarrow.RecordBatch
+                batch_size = args[0].num_rows
+            else:
+                batch_size = 1
+            return [() for _ in range(batch_size)]
     else:
         def get_args(*args: pa.RecordBatch):
             arrays = [
@@ -204,6 +206,7 @@ def wrap_arrow_batch_udf_arrow(f, args_offsets, kwargs_offsets, return_type, run
         results = [result_func(func(*row)) for row in get_args(*args)]
         try:
             arr = pa.array(results, type=arrow_return_type)
+            print("\n\n **** arr result:", arr)
         except (pa.lib.ArrowInvalid, pa.lib.ArrowTypeError) as e:
             raise PySparkRuntimeError(
                 errorClass="UDF_ARROW_TYPE_CONVERSION_ERROR",
@@ -254,6 +257,7 @@ def wrap_arrow_batch_udf_legacy(f, args_offsets, kwargs_offsets, return_type, ru
     if zero_arg_exec:
 
         def get_args(*args: pd.Series):
+
             return [() for _ in args[0]]
 
     else:

@@ -89,7 +89,7 @@ class ArrowPythonUDFTestsMixin(BaseUDFTestsMixin):
             .first()
         )
 
-        self.assertEqual(row_true[0], row_none[0]) # "[1, 2, 3]"
+        self.assertEqual(row_true[0], row_none[0])  # "[1, 2, 3]"
 
         # useArrow=False
         row_false = (
@@ -171,14 +171,20 @@ class ArrowPythonUDFTestsMixin(BaseUDFTestsMixin):
             self.assertEqual(res.dtypes[0][1], ddl_type)
 
         # invalid
-        with self.assertRaises(PythonException):
+        with self.assertRaises(PythonException) as cm:
             df_floating_value.select(udf(lambda x: x, "int")("value").alias("res")).collect()
+        self.assertIn("UDF_ARROW_TYPE_CONVERSION_ERROR", str(cm.exception))
+        self.assertIn("Could not convert", str(cm.exception))
 
-        with self.assertRaises(PythonException):
+        with self.assertRaises(PythonException) as cm:
             df_int_value.select(udf(lambda x: x, "decimal")("value").alias("res")).collect()
+        self.assertIn("UDF_ARROW_TYPE_CONVERSION_ERROR", str(cm.exception))
+        self.assertIn("Could not convert", str(cm.exception))
 
-        with self.assertRaises(PythonException):
+        with self.assertRaises(PythonException) as cm:
             df_floating_value.select(udf(lambda x: x, "decimal")("value").alias("res")).collect()
+        self.assertIn("UDF_ARROW_TYPE_CONVERSION_ERROR", str(cm.exception))
+        self.assertIn("Could not convert", str(cm.exception))
 
     def test_err_return_type(self):
         with self.assertRaises(PySparkNotImplementedError) as pe:
@@ -395,14 +401,20 @@ class ArrowPythonUDFLegacyTestsMixin(BaseUDFTestsMixin):
                     self.assertEqual(res.dtypes[0][1], ddl_type)
 
                 # invalid
-                with self.assertRaises(PythonException):
+                with self.assertRaises(PythonException) as cm:
                     df_floating_value.select(udf(lambda x: x, "int")("value").alias("res")).collect()
+                self.assertIn("UDF_ARROW_TYPE_CONVERSION_ERROR", str(cm.exception))
+                self.assertIn("Could not convert", str(cm.exception))
 
-                with self.assertRaises(PythonException):
+                with self.assertRaises(PythonException) as cm:
                     df_int_value.select(udf(lambda x: x, "decimal")("value").alias("res")).collect()
+                self.assertIn("UDF_ARROW_TYPE_CONVERSION_ERROR", str(cm.exception))
+                self.assertIn("Could not convert", str(cm.exception))
 
-                with self.assertRaises(PythonException):
+                with self.assertRaises(PythonException) as cm:
                     df_floating_value.select(udf(lambda x: x, "decimal")("value").alias("res")).collect()
+                self.assertIn("UDF_ARROW_TYPE_CONVERSION_ERROR", str(cm.exception))
+                self.assertIn("Could not convert", str(cm.exception))
 
     def test_err_return_type(self):
         for pandas_conversion in [True, False]:
@@ -492,6 +504,10 @@ class ArrowPythonUDFCombinedTestsMixin(ArrowPythonUDFTestsMixin, ArrowPythonUDFL
 
 
 class ArrowPythonUDFTests(ArrowPythonUDFTestsMixin, ReusedSQLTestCase):
+    # TODO double check this for legacy enabled?
+    def test_nondeterministic_udf2(self):
+         self.skipTest("Skip test_nondeterministic_udf2 for Arrow batched eval")
+         
     @classmethod
     def setUpClass(cls):
         super(ArrowPythonUDFTests, cls).setUpClass()

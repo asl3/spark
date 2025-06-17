@@ -169,8 +169,9 @@ class BaseUDFTestsMixin(object):
 
     def test_nondeterministic_udf2(self):
         import random
-
-        random_udf = udf(lambda: random.randint(6, 6), IntegerType()).asNondeterministic()
+        from pyspark.util import PythonEvalType
+        
+        random_udf = udf(lambda: random.randint(6, 6), IntegerType(), useArrow=True).asNondeterministic()
         self.assertEqual(random_udf.deterministic, False)
         random_udf1 = self.spark.catalog.registerFunction("randInt", random_udf)
         self.assertEqual(random_udf1.deterministic, False)
