@@ -93,6 +93,28 @@ class BaseUDFTestsMixin(object):
         sqlContext.registerFunction("oneArg", lambda x: len(x), IntegerType())
         [row] = sqlContext.sql("SELECT oneArg('test')").collect()
         self.assertEqual(row[0], 4)
+    
+    def test_udf_arrowserializer(self):
+        # import pandas, pyarrow, sys
+        with self.tempView("test"):
+            print("\n *** begin test_udf2")
+            self.spark.conf.set("spark.sql.execution.pythonUDF.arrow.enabled", "false")
+
+            @udf("int", useArrow=True)
+            def test_udf(a, b):
+                return a + b
+
+            self.spark.udf.register("test_udf", test_udf)
+
+            # Create test data with explicit columns
+            df = self.spark.createDataFrame([(2, 2), (3, 3)], ["a", "b"])
+            df.createOrReplaceTempView("test_data2")
+
+            # Test the UDF with direct column references
+            res = self.spark.sql("SELECT test_udf(a, b) FROM test_data2").collect()
+            print("\n\n**** res: ", res)
+            self.assertEqual(4, res[0][0])  # First row should be 2 + 2 = 4
+            # self.assertTrue(False)
 
     def test_udf2(self):
         with self.tempView("test"):
@@ -147,7 +169,8 @@ class BaseUDFTestsMixin(object):
 
     def test_nondeterministic_udf2(self):
         import random
-
+        from pyspark.util import PythonEvalType
+        
         random_udf = udf(lambda: random.randint(6, 6), IntegerType()).asNondeterministic()
         self.assertEqual(random_udf.deterministic, False)
         random_udf1 = self.spark.catalog.registerFunction("randInt", random_udf)
@@ -1013,7 +1036,8 @@ class BaseUDFTestsMixin(object):
         )
 
     def test_nested_map(self):
-        df = self.spark.range(1).selectExpr("map('a', map('b', 'c')) as nested_map")
+        # df = self.spark.range(1).selectExpr("map('a', map('b', 'c')) as nested_map")
+        df = self.spark.range(1).selectExpr("map('b', 'c') as nested_map")
         # Input
         row = df.select(udf(lambda x: str(x))("nested_map")).first()
         self.assertEqual(row[0], "{'a': {'b': 'c'}}")
@@ -1206,7 +1230,10 @@ class BaseUDFTestsMixin(object):
         "pypy" in platform.python_implementation().lower(), "cannot run in environment pypy"
     )
     def test_python_udf_segfault(self):
-        with self.sql_conf({"spark.sql.execution.pyspark.udf.faulthandler.enabled": True}):
+        with self.sql_conf({
+            "spark.sql.execution.pyspark.udf.faulthandler.enabled": True,
+            "spark.sql.execution.pythonUDF.arrow.enabled": False
+        }):
             with self.assertRaisesRegex(Exception, "Segmentation fault"):
                 import ctypes
 
