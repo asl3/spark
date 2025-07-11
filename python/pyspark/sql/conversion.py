@@ -120,11 +120,11 @@ class LocalDataToArrowConversion:
                 for field in dataType.fields
             ]
             
-            all_pass_through = all(
-                conv.__code__ == (lambda x: x).__code__ for conv in field_convs
+            needs_conversion = any(
+                conv.__code__ != (lambda x: x).__code__ for conv in field_convs
             )
 
-            if all_pass_through:
+            if not needs_conversion:
                 def convert_struct(value: Any) -> Any:
                     if value is None:
                         if not nullable:
@@ -200,9 +200,9 @@ class LocalDataToArrowConversion:
                 dataType.elementType, dataType.containsNull
             )
             
-            is_pass_through = element_conv.__code__ == (lambda x: x).__code__
+            needs_conversion = element_conv.__code__ != (lambda x: x).__code__
 
-            if is_pass_through:
+            if not needs_conversion:
                 def convert_array(value: Any) -> Any:
                     if value is None:
                         if not nullable:
@@ -229,10 +229,10 @@ class LocalDataToArrowConversion:
                 dataType.valueType, dataType.valueContainsNull
             )
             
-            key_pass_through = key_conv.__code__ == (lambda x: x).__code__
-            value_pass_through = value_conv.__code__ == (lambda x: x).__code__
+            key_needs_conversion = key_conv.__code__ != (lambda x: x).__code__
+            value_needs_conversion = value_conv.__code__ != (lambda x: x).__code__
 
-            if key_pass_through and value_pass_through:
+            if not key_needs_conversion and not value_needs_conversion:
                 def convert_map(value: Any) -> Any:
                     if value is None:
                         if not nullable:
@@ -332,9 +332,9 @@ class LocalDataToArrowConversion:
 
             conv = LocalDataToArrowConversion._create_converter(udt.sqlType())
             
-            is_pass_through = conv.__code__ == (lambda x: x).__code__
+            needs_conversion = conv.__code__ != (lambda x: x).__code__
 
-            if is_pass_through:
+            if not needs_conversion:
                 def convert_udt(value: Any) -> Any:
                     if value is None:
                         if not nullable:
@@ -394,7 +394,7 @@ class LocalDataToArrowConversion:
             for field in schema.fields
         ]
         
-        is_pass_through = [conv.__code__ == (lambda x: x).__code__ for conv in column_convs]
+        needs_conversion = [conv.__code__ != (lambda x: x).__code__ for conv in column_convs]
 
         pylist: List[List] = [[] for _ in range(len(column_names))]
 
@@ -409,7 +409,7 @@ class LocalDataToArrowConversion:
                 item = item.__dict__
             if isinstance(item, dict):
                 for i, col in enumerate(column_names):
-                    if is_pass_through[i]:
+                    if not needs_conversion[i]:
                         pylist[i].append(item.get(col))
                     else:
                         pylist[i].append(column_convs[i](item.get(col)))
@@ -427,7 +427,7 @@ class LocalDataToArrowConversion:
                     )
 
                 for i in range(len(column_names)):
-                    if is_pass_through[i]:
+                    if not needs_conversion[i]:
                         pylist[i].append(item[i])
                     else:
                         pylist[i].append(column_convs[i](item[i]))
@@ -494,11 +494,11 @@ class ArrowTableToRowsConversion:
                 ArrowTableToRowsConversion._create_converter(f.dataType) for f in dataType.fields
             ]
             
-            all_pass_through = all(
-                conv.__code__ == (lambda x: x).__code__ for conv in field_convs
+            needs_conversion = any(
+                conv.__code__ != (lambda x: x).__code__ for conv in field_convs
             )
 
-            if all_pass_through:
+            if not needs_conversion:
                 def convert_struct(value: Any) -> Any:
                     if value is None:
                         return None
@@ -523,9 +523,9 @@ class ArrowTableToRowsConversion:
         elif isinstance(dataType, ArrayType):
             element_conv = ArrowTableToRowsConversion._create_converter(dataType.elementType)
             
-            is_pass_through = element_conv.__code__ == (lambda x: x).__code__
+            needs_conversion = element_conv.__code__ != (lambda x: x).__code__
 
-            if is_pass_through:
+            if not needs_conversion:
                 def convert_array(value: Any) -> Any:
                     if value is None:
                         return None
@@ -546,10 +546,10 @@ class ArrowTableToRowsConversion:
             key_conv = ArrowTableToRowsConversion._create_converter(dataType.keyType)
             value_conv = ArrowTableToRowsConversion._create_converter(dataType.valueType)
             
-            key_pass_through = key_conv.__code__ == (lambda x: x).__code__
-            value_pass_through = value_conv.__code__ == (lambda x: x).__code__
+            key_needs_conversion = key_conv.__code__ != (lambda x: x).__code__
+            value_needs_conversion = value_conv.__code__ != (lambda x: x).__code__
 
-            if key_pass_through and value_pass_through:
+            if not key_needs_conversion and not value_needs_conversion:
                 def convert_map(value: Any) -> Any:
                     if value is None:
                         return None
@@ -606,9 +606,9 @@ class ArrowTableToRowsConversion:
 
             conv = ArrowTableToRowsConversion._create_converter(udt.sqlType())
             
-            is_pass_through = conv.__code__ == (lambda x: x).__code__
+            needs_conversion = conv.__code__ != (lambda x: x).__code__
 
-            if is_pass_through:
+            if not needs_conversion:
                 def convert_udt(value: Any) -> Any:
                     if value is None:
                         return None
@@ -655,7 +655,7 @@ class ArrowTableToRowsConversion:
             ArrowTableToRowsConversion._create_converter(f.dataType) for f in schema.fields
         ]
         
-        is_pass_through = [conv.__code__ == (lambda x: x).__code__ for conv in field_converters]
+        needs_conversion = [conv.__code__ != (lambda x: x).__code__ for conv in field_converters]
 
         columnar_data = [column.to_pylist() for column in table.columns]
 
@@ -663,10 +663,10 @@ class ArrowTableToRowsConversion:
         for i in range(0, table.num_rows):
             values = []
             for j in range(table.num_columns):
-                if is_pass_through[j]:
-                    values.append(columnar_data[j][i])
-                else:
+                if needs_conversion[j]:
                     values.append(field_converters[j](columnar_data[j][i]))
+                else:
+                    values.append(columnar_data[j][i])
             
             rows.append(_create_row(fields=schema.fieldNames(), values=values))
         return rows
