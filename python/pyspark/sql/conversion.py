@@ -119,40 +119,79 @@ class LocalDataToArrowConversion:
                 LocalDataToArrowConversion._create_converter(field.dataType, field.nullable)
                 for field in dataType.fields
             ]
+            
+            all_pass_through = all(
+                conv.__code__ == (lambda x: x).__code__ for conv in field_convs
+            )
 
-            def convert_struct(value: Any) -> Any:
-                if value is None:
-                    if not nullable:
-                        raise PySparkValueError(f"input for {dataType} must not be None")
-                    return None
-                else:
-                    assert isinstance(value, (tuple, dict)) or hasattr(
-                        value, "__dict__"
-                    ), f"{type(value)} {value}"
-
-                    _dict = {}
-                    if (
-                        not isinstance(value, Row)
-                        and not isinstance(value, tuple)  # inherited namedtuple
-                        and hasattr(value, "__dict__")
-                    ):
-                        value = value.__dict__
-                    if isinstance(value, dict):
-                        for i, field in enumerate(field_names):
-                            _dict[dedup_field_names[i]] = field_convs[i](value.get(field))
+            if all_pass_through:
+                def convert_struct(value: Any) -> Any:
+                    if value is None:
+                        if not nullable:
+                            raise PySparkValueError(f"input for {dataType} must not be None")
+                        return None
                     else:
-                        if len(value) != len(field_names):
-                            raise PySparkValueError(
-                                errorClass="AXIS_LENGTH_MISMATCH",
-                                messageParameters={
-                                    "expected_length": str(len(field_names)),
-                                    "actual_length": str(len(value)),
-                                },
-                            )
-                        for i in range(len(field_names)):
-                            _dict[dedup_field_names[i]] = field_convs[i](value[i])
+                        assert isinstance(value, (tuple, dict)) or hasattr(
+                            value, "__dict__"
+                        ), f"{type(value)} {value}"
 
-                    return _dict
+                        _dict = {}
+                        if (
+                            not isinstance(value, Row)
+                            and not isinstance(value, tuple)  # inherited namedtuple
+                            and hasattr(value, "__dict__")
+                        ):
+                            value = value.__dict__
+                        if isinstance(value, dict):
+                            for i, field in enumerate(field_names):
+                                _dict[dedup_field_names[i]] = value.get(field)
+                        else:
+                            if len(value) != len(field_names):
+                                raise PySparkValueError(
+                                    errorClass="AXIS_LENGTH_MISMATCH",
+                                    messageParameters={
+                                        "expected_length": str(len(field_names)),
+                                        "actual_length": str(len(value)),
+                                    },
+                                )
+                            for i in range(len(field_names)):
+                                _dict[dedup_field_names[i]] = value[i]
+
+                        return _dict
+            else:
+                def convert_struct(value: Any) -> Any:
+                    if value is None:
+                        if not nullable:
+                            raise PySparkValueError(f"input for {dataType} must not be None")
+                        return None
+                    else:
+                        assert isinstance(value, (tuple, dict)) or hasattr(
+                            value, "__dict__"
+                        ), f"{type(value)} {value}"
+
+                        _dict = {}
+                        if (
+                            not isinstance(value, Row)
+                            and not isinstance(value, tuple)  # inherited namedtuple
+                            and hasattr(value, "__dict__")
+                        ):
+                            value = value.__dict__
+                        if isinstance(value, dict):
+                            for i, field in enumerate(field_names):
+                                _dict[dedup_field_names[i]] = field_convs[i](value.get(field))
+                        else:
+                            if len(value) != len(field_names):
+                                raise PySparkValueError(
+                                    errorClass="AXIS_LENGTH_MISMATCH",
+                                    messageParameters={
+                                        "expected_length": str(len(field_names)),
+                                        "actual_length": str(len(value)),
+                                    },
+                                )
+                            for i in range(len(field_names)):
+                                _dict[dedup_field_names[i]] = field_convs[i](value[i])
+
+                        return _dict
 
             return convert_struct
 
@@ -160,15 +199,27 @@ class LocalDataToArrowConversion:
             element_conv = LocalDataToArrowConversion._create_converter(
                 dataType.elementType, dataType.containsNull
             )
+            
+            is_pass_through = element_conv.__code__ == (lambda x: x).__code__
 
-            def convert_array(value: Any) -> Any:
-                if value is None:
-                    if not nullable:
-                        raise PySparkValueError(f"input for {dataType} must not be None")
-                    return None
-                else:
-                    assert isinstance(value, (list, array.array))
-                    return [element_conv(v) for v in value]
+            if is_pass_through:
+                def convert_array(value: Any) -> Any:
+                    if value is None:
+                        if not nullable:
+                            raise PySparkValueError(f"input for {dataType} must not be None")
+                        return None
+                    else:
+                        assert isinstance(value, (list, array.array))
+                        return list(value)  # Direct conversion
+            else:
+                def convert_array(value: Any) -> Any:
+                    if value is None:
+                        if not nullable:
+                            raise PySparkValueError(f"input for {dataType} must not be None")
+                        return None
+                    else:
+                        assert isinstance(value, (list, array.array))
+                        return [element_conv(v) for v in value]
 
             return convert_array
 
@@ -177,20 +228,33 @@ class LocalDataToArrowConversion:
             value_conv = LocalDataToArrowConversion._create_converter(
                 dataType.valueType, dataType.valueContainsNull
             )
+            
+            key_pass_through = key_conv.__code__ == (lambda x: x).__code__
+            value_pass_through = value_conv.__code__ == (lambda x: x).__code__
 
-            def convert_map(value: Any) -> Any:
-                if value is None:
-                    if not nullable:
-                        raise PySparkValueError(f"input for {dataType} must not be None")
-                    return None
-                else:
-                    assert isinstance(value, dict)
+            if key_pass_through and value_pass_through:
+                def convert_map(value: Any) -> Any:
+                    if value is None:
+                        if not nullable:
+                            raise PySparkValueError(f"input for {dataType} must not be None")
+                        return None
+                    else:
+                        assert isinstance(value, dict)
+                        return list(value.items())  # Direct conversion
+            else:
+                def convert_map(value: Any) -> Any:
+                    if value is None:
+                        if not nullable:
+                            raise PySparkValueError(f"input for {dataType} must not be None")
+                        return None
+                    else:
+                        assert isinstance(value, dict)
 
-                    _tuples = []
-                    for k, v in value.items():
-                        _tuples.append((key_conv(k), value_conv(v)))
+                        _tuples = []
+                        for k, v in value.items():
+                            _tuples.append((key_conv(k), value_conv(v)))
 
-                    return _tuples
+                        return _tuples
 
             return convert_map
 
@@ -267,14 +331,25 @@ class LocalDataToArrowConversion:
             udt: UserDefinedType = dataType
 
             conv = LocalDataToArrowConversion._create_converter(udt.sqlType())
+            
+            is_pass_through = conv.__code__ == (lambda x: x).__code__
 
-            def convert_udt(value: Any) -> Any:
-                if value is None:
-                    if not nullable:
-                        raise PySparkValueError(f"input for {dataType} must not be None")
-                    return None
-                else:
-                    return conv(udt.serialize(value))
+            if is_pass_through:
+                def convert_udt(value: Any) -> Any:
+                    if value is None:
+                        if not nullable:
+                            raise PySparkValueError(f"input for {dataType} must not be None")
+                        return None
+                    else:
+                        return udt.serialize(value)
+            else:
+                def convert_udt(value: Any) -> Any:
+                    if value is None:
+                        if not nullable:
+                            raise PySparkValueError(f"input for {dataType} must not be None")
+                        return None
+                    else:
+                        return conv(udt.serialize(value))
 
             return convert_udt
 
@@ -318,6 +393,8 @@ class LocalDataToArrowConversion:
             LocalDataToArrowConversion._create_converter(field.dataType, field.nullable)
             for field in schema.fields
         ]
+        
+        is_pass_through = [conv.__code__ == (lambda x: x).__code__ for conv in column_convs]
 
         pylist: List[List] = [[] for _ in range(len(column_names))]
 
@@ -332,7 +409,10 @@ class LocalDataToArrowConversion:
                 item = item.__dict__
             if isinstance(item, dict):
                 for i, col in enumerate(column_names):
-                    pylist[i].append(column_convs[i](item.get(col)))
+                    if is_pass_through[i]:
+                        pylist[i].append(item.get(col))
+                    else:
+                        pylist[i].append(column_convs[i](item.get(col)))
             elif item is None:
                 for i, col in enumerate(column_names):
                     pylist[i].append(None)
@@ -347,7 +427,10 @@ class LocalDataToArrowConversion:
                     )
 
                 for i in range(len(column_names)):
-                    pylist[i].append(column_convs[i](item[i]))
+                    if is_pass_through[i]:
+                        pylist[i].append(item[i])
+                    else:
+                        pylist[i].append(column_convs[i](item[i]))
 
         pa_schema = to_arrow_schema(
             StructType(
@@ -410,44 +493,78 @@ class ArrowTableToRowsConversion:
             field_convs = [
                 ArrowTableToRowsConversion._create_converter(f.dataType) for f in dataType.fields
             ]
+            
+            all_pass_through = all(
+                conv.__code__ == (lambda x: x).__code__ for conv in field_convs
+            )
 
-            def convert_struct(value: Any) -> Any:
-                if value is None:
-                    return None
-                else:
-                    assert isinstance(value, dict)
-
-                    _values = [
-                        field_convs[i](value.get(name, None))
-                        for i, name in enumerate(dedup_field_names)
-                    ]
-                    return _create_row(field_names, _values)
+            if all_pass_through:
+                def convert_struct(value: Any) -> Any:
+                    if value is None:
+                        return None
+                    else:
+                        assert isinstance(value, dict)
+                        _values = [value.get(name, None) for name in dedup_field_names]
+                        return _create_row(field_names, _values)
+            else:
+                def convert_struct(value: Any) -> Any:
+                    if value is None:
+                        return None
+                    else:
+                        assert isinstance(value, dict)
+                        _values = [
+                            field_convs[i](value.get(name, None))
+                            for i, name in enumerate(dedup_field_names)
+                        ]
+                        return _create_row(field_names, _values)
 
             return convert_struct
 
         elif isinstance(dataType, ArrayType):
             element_conv = ArrowTableToRowsConversion._create_converter(dataType.elementType)
+            
+            is_pass_through = element_conv.__code__ == (lambda x: x).__code__
 
-            def convert_array(value: Any) -> Any:
-                if value is None:
-                    return None
-                else:
-                    assert isinstance(value, list)
-                    return [element_conv(v) for v in value]
+            if is_pass_through:
+                def convert_array(value: Any) -> Any:
+                    if value is None:
+                        return None
+                    else:
+                        assert isinstance(value, list)
+                        return list(value)  # Direct conversion
+            else:
+                def convert_array(value: Any) -> Any:
+                    if value is None:
+                        return None
+                    else:
+                        assert isinstance(value, list)
+                        return [element_conv(v) for v in value]
 
             return convert_array
 
         elif isinstance(dataType, MapType):
             key_conv = ArrowTableToRowsConversion._create_converter(dataType.keyType)
             value_conv = ArrowTableToRowsConversion._create_converter(dataType.valueType)
+            
+            key_pass_through = key_conv.__code__ == (lambda x: x).__code__
+            value_pass_through = value_conv.__code__ == (lambda x: x).__code__
 
-            def convert_map(value: Any) -> Any:
-                if value is None:
-                    return None
-                else:
-                    assert isinstance(value, list)
-                    assert all(isinstance(t, tuple) and len(t) == 2 for t in value)
-                    return dict((key_conv(t[0]), value_conv(t[1])) for t in value)
+            if key_pass_through and value_pass_through:
+                def convert_map(value: Any) -> Any:
+                    if value is None:
+                        return None
+                    else:
+                        assert isinstance(value, list)
+                        assert all(isinstance(t, tuple) and len(t) == 2 for t in value)
+                        return dict(value)  # Direct conversion
+            else:
+                def convert_map(value: Any) -> Any:
+                    if value is None:
+                        return None
+                    else:
+                        assert isinstance(value, list)
+                        assert all(isinstance(t, tuple) and len(t) == 2 for t in value)
+                        return dict((key_conv(t[0]), value_conv(t[1])) for t in value)
 
             return convert_map
 
@@ -488,12 +605,21 @@ class ArrowTableToRowsConversion:
             udt: UserDefinedType = dataType
 
             conv = ArrowTableToRowsConversion._create_converter(udt.sqlType())
+            
+            is_pass_through = conv.__code__ == (lambda x: x).__code__
 
-            def convert_udt(value: Any) -> Any:
-                if value is None:
-                    return None
-                else:
-                    return udt.deserialize(conv(value))
+            if is_pass_through:
+                def convert_udt(value: Any) -> Any:
+                    if value is None:
+                        return None
+                    else:
+                        return udt.deserialize(value)
+            else:
+                def convert_udt(value: Any) -> Any:
+                    if value is None:
+                        return None
+                    else:
+                        return udt.deserialize(conv(value))
 
             return convert_udt
 
@@ -528,11 +654,19 @@ class ArrowTableToRowsConversion:
         field_converters = [
             ArrowTableToRowsConversion._create_converter(f.dataType) for f in schema.fields
         ]
+        
+        is_pass_through = [conv.__code__ == (lambda x: x).__code__ for conv in field_converters]
 
         columnar_data = [column.to_pylist() for column in table.columns]
 
         rows: List[Row] = []
         for i in range(0, table.num_rows):
-            values = [field_converters[j](columnar_data[j][i]) for j in range(table.num_columns)]
+            values = []
+            for j in range(table.num_columns):
+                if is_pass_through[j]:
+                    values.append(columnar_data[j][i])
+                else:
+                    values.append(field_converters[j](columnar_data[j][i]))
+            
             rows.append(_create_row(fields=schema.fieldNames(), values=values))
         return rows
