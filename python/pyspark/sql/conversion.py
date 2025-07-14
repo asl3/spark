@@ -53,8 +53,8 @@ class LocalDataToArrowConversion:
 
     @staticmethod
     def _need_converter(
-            dataType: DataType,
-            nullable: bool = True,
+        dataType: DataType,
+        nullable: bool = True,
     ) -> bool:
         if not nullable:
             # always check the nullability
@@ -93,8 +93,8 @@ class LocalDataToArrowConversion:
 
     @staticmethod
     def _create_converter(
-            dataType: DataType,
-            nullable: bool = True,
+        dataType: DataType,
+        nullable: bool = True,
     ) -> Optional[Callable[[Any], Any]]:
         assert dataType is not None and isinstance(dataType, DataType)
         assert isinstance(nullable, bool)
@@ -122,9 +122,9 @@ class LocalDataToArrowConversion:
 
                     _dict = {}
                     if (
-                            not isinstance(value, Row)
-                            and not isinstance(value, tuple)  # inherited namedtuple
-                            and hasattr(value, "__dict__")
+                        not isinstance(value, Row)
+                        and not isinstance(value, tuple)  # inherited namedtuple
+                        and hasattr(value, "__dict__")
                     ):
                         value = value.__dict__
                     if isinstance(value, dict):
@@ -537,9 +537,9 @@ class ArrowTableToRowsConversion:
                 if value is None:
                     return None
                 elif (
-                        isinstance(value, dict)
-                        and all(key in value for key in ["value", "metadata"])
-                        and all(isinstance(value[key], bytes) for key in ["value", "metadata"])
+                    isinstance(value, dict)
+                    and all(key in value for key in ["value", "metadata"])
+                    and all(isinstance(value[key], bytes) for key in ["value", "metadata"])
                 ):
                     return VariantVal(value["value"], value["metadata"])
                 else:

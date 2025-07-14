@@ -1644,14 +1644,12 @@ def read_udtf(pickleSer, infile, eval_type):
                         pa.RecordBatch.from_pylist(data, schema=pa.schema(list(arrow_return_type)))
                     ]
                 
-                # Optimization: Skip LocalDataToArrowConversion.convert() when no conversion needed
                 needs_conversion = any(
                     LocalDataToArrowConversion._need_converter(field.dataType, field.nullable)
                     for field in return_type.fields
                 )
                 
                 if not needs_conversion:
-                    # Fast path: Create Arrow RecordBatch directly from simple data
                     try:
                         return [pa.RecordBatch.from_pylist(data, schema=pa.schema(list(arrow_return_type)))]
                     except Exception:
@@ -2485,7 +2483,6 @@ def main(infile, outfile):
         write_int(SpecialLengths.END_OF_DATA_SECTION, outfile)
         sys.exit(-1)
 
-    # Force to cancel dump_traceback_later
     faulthandler.cancel_dump_traceback_later()
 
 
