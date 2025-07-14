@@ -75,7 +75,8 @@ def records_to_arrow_batches(
     pa_schema = to_arrow_schema(return_type)
     column_names = return_type.fieldNames()
     column_converters = [
-        LocalDataToArrowConversion._create_converter(field.dataType) for field in return_type.fields
+        LocalDataToArrowConversion._create_converter(field.dataType) or (lambda x: x)
+        for field in return_type.fields
     ]
     # Convert the results from the `reader.read` method to an iterator of arrow batches.
     num_cols = len(column_names)

@@ -18,7 +18,7 @@
 import array
 import datetime
 import decimal
-from typing import TYPE_CHECKING, Any, Callable, List, Sequence
+from typing import TYPE_CHECKING, Any, Callable, List, Optional, Sequence
 
 from pyspark.errors import PySparkValueError
 from pyspark.sql.pandas.types import _dedup_names, _deduplicate_field_names, to_arrow_schema
@@ -95,12 +95,12 @@ class LocalDataToArrowConversion:
     def _create_converter(
         dataType: DataType,
         nullable: bool = True,
-    ) -> Callable:
+    ) -> Optional[Callable]:
         assert dataType is not None and isinstance(dataType, DataType)
         assert isinstance(nullable, bool)
 
         if not LocalDataToArrowConversion._need_converter(dataType, nullable):
-            return lambda value: value
+            return None
 
         if isinstance(dataType, NullType):
 
@@ -139,7 +139,11 @@ class LocalDataToArrowConversion:
                         value = value.__dict__
                     if isinstance(value, dict):
                         for i, field in enumerate(field_names):
-                            _dict[dedup_field_names[i]] = field_convs[i](value.get(field))
+                            _dict[dedup_field_names[i]] = (
+                                field_convs[i](value.get(field))
+                                if field_convs[i] is not None
+                                else value.get(field)
+                            )
                     else:
                         if len(value) != len(field_names):
                             raise PySparkValueError(
@@ -150,7 +154,9 @@ class LocalDataToArrowConversion:
                                 },
                             )
                         for i in range(len(field_names)):
-                            _dict[dedup_field_names[i]] = field_convs[i](value[i])
+                            _dict[dedup_field_names[i]] = (
+                                field_convs[i](value[i]) if field_convs[i] is not None else value[i]
+                            )
 
                     return _dict
 
@@ -161,14 +167,27 @@ class LocalDataToArrowConversion:
                 dataType.elementType, dataType.containsNull
             )
 
-            def convert_array(value: Any) -> Any:
-                if value is None:
-                    if not nullable:
-                        raise PySparkValueError(f"input for {dataType} must not be None")
-                    return None
-                else:
-                    assert isinstance(value, (list, array.array))
-                    return [element_conv(v) for v in value]
+            if element_conv is None:
+
+                def convert_array(value: Any) -> Any:
+                    if value is None:
+                        if not nullable:
+                            raise PySparkValueError(f"input for {dataType} must not be None")
+                        return None
+                    else:
+                        assert isinstance(value, (list, array.array))
+                        return list(value)
+
+            else:
+
+                def convert_array(value: Any) -> Any:
+                    if value is None:
+                        if not nullable:
+                            raise PySparkValueError(f"input for {dataType} must not be None")
+                        return None
+                    else:
+                        assert isinstance(value, (list, array.array))
+                        return [element_conv(v) for v in value]
 
             return convert_array
 
@@ -178,19 +197,51 @@ class LocalDataToArrowConversion:
                 dataType.valueType, dataType.valueContainsNull
             )
 
-            def convert_map(value: Any) -> Any:
-                if value is None:
-                    if not nullable:
-                        raise PySparkValueError(f"input for {dataType} must not be None")
-                    return None
+            if key_conv is None:
+                if value_conv is None:
+
+                    def convert_map(value: Any) -> Any:
+                        if value is None:
+                            if not nullable:
+                                raise PySparkValueError(f"input for {dataType} must not be None")
+                            return None
+                        else:
+                            assert isinstance(value, dict)
+                            return list(value.items())
+
                 else:
-                    assert isinstance(value, dict)
 
-                    _tuples = []
-                    for k, v in value.items():
-                        _tuples.append((key_conv(k), value_conv(v)))
+                    def convert_map(value: Any) -> Any:
+                        if value is None:
+                            if not nullable:
+                                raise PySparkValueError(f"input for {dataType} must not be None")
+                            return None
+                        else:
+                            assert isinstance(value, dict)
+                            return [(k, value_conv(v)) for k, v in value.items()]
 
-                    return _tuples
+            else:
+                if value_conv is None:
+
+                    def convert_map(value: Any) -> Any:
+                        if value is None:
+                            if not nullable:
+                                raise PySparkValueError(f"input for {dataType} must not be None")
+                            return None
+                        else:
+                            assert isinstance(value, dict)
+                            return [(key_conv(k), v) for k, v in value.items()]
+
+                else:
+
+                    def convert_map(value: Any) -> Any:
+                        if value is None:
+                            if not nullable:
+                                raise PySparkValueError(f"input for {dataType} must not be None")
+                            return None
+                        else:
+                            assert isinstance(value, dict)
+                            return [(key_conv(k), value_conv(v)) for k, v in value.items()]
 
             return convert_map
 
@@ -268,13 +319,25 @@ class LocalDataToArrowConversion:
 
             conv = LocalDataToArrowConversion._create_converter(udt.sqlType())
 
-            def convert_udt(value: Any) -> Any:
-                if value is None:
-                    if not nullable:
-                        raise PySparkValueError(f"input for {dataType} must not be None")
-                    return None
-                else:
-                    return conv(udt.serialize(value))
+            if conv is None:
+
+                def convert_udt(value: Any) -> Any:
+                    if value is None:
+                        if not nullable:
+                            raise PySparkValueError(f"input for {dataType} must not be None")
+                        return None
+                    else:
+                        return udt.serialize(value)
+
+            else:
+
+                def convert_udt(value: Any) -> Any:
+                    if value is None:
+                        if not nullable:
+                            raise PySparkValueError(f"input for {dataType} must not be None")
+                        return None
+                    else:
+                        return conv(udt.serialize(value))
 
             return convert_udt
 
@@ -301,7 +364,7 @@ class LocalDataToArrowConversion:
 
             return convert_other
         else:
-            return lambda value: value
+            return None
 
     @staticmethod
     def convert(data: Sequence[Any], schema: StructType, use_large_var_types: bool) -> "pa.Table":
@@ -353,7 +416,10 @@ class LocalDataToArrowConversion:
             for field in schema.fields
         ]
 
-        pylist = [[conv(row[i]) for row in rows] for i, conv in enumerate(column_convs)]
+        pylist = [
+            [conv(row[i]) for row in rows] if conv is not None else [row[i] for row in rows]
+            for i, conv in enumerate(column_convs)
+        ]
 
         pa_schema = to_arrow_schema(
             StructType(
