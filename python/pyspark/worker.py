@@ -1643,6 +1643,22 @@ def read_udtf(pickleSer, infile, eval_type):
                     return [
                         pa.RecordBatch.from_pylist(data, schema=pa.schema(list(arrow_return_type)))
                     ]
+                
+                # Optimization: Skip LocalDataToArrowConversion.convert() when no conversion needed
+                needs_conversion = any(
+                    LocalDataToArrowConversion._need_converter(field.dataType, field.nullable)
+                    for field in return_type.fields
+                )
+                
+                if not needs_conversion:
+                    # Fast path: Create Arrow RecordBatch directly from simple data
+                    try:
+                        return [pa.RecordBatch.from_pylist(data, schema=pa.schema(list(arrow_return_type)))]
+                    except Exception:
+                        # Fall back to full conversion if direct creation fails
+                        pass
+                
+                # Full conversion path
                 try:
                     ret = LocalDataToArrowConversion.convert(
                         data, return_type, prefers_large_var_types
@@ -2347,6 +2363,7 @@ def read_udfs(pickleSer, infile, eval_type):
 
 def main(infile, outfile):
     faulthandler_log_path = os.environ.get("PYTHON_FAULTHANDLER_DIR", None)
+    tracebackDumpIntervalSeconds = os.environ.get("PYTHON_TRACEBACK_DUMP_INTERVAL_SECONDS", None)
     try:
         if faulthandler_log_path:
             faulthandler_log_path = os.path.join(faulthandler_log_path, str(os.getpid()))
@@ -2357,6 +2374,9 @@ def main(infile, outfile):
         split_index = read_int(infile)
         if split_index == -1:  # for unit tests
             sys.exit(-1)
+
+        if tracebackDumpIntervalSeconds is not None and int(tracebackDumpIntervalSeconds) > 0:
+            faulthandler.dump_traceback_later(int(tracebackDumpIntervalSeconds), repeat=True)
 
         check_python_version(infile)
 
@@ -2464,6 +2484,9 @@ def main(infile, outfile):
         # write a different value to tell JVM to not reuse this worker
         write_int(SpecialLengths.END_OF_DATA_SECTION, outfile)
         sys.exit(-1)
+
+    # Force to cancel dump_traceback_later
+    faulthandler.cancel_dump_traceback_later()
 
 
 if __name__ == "__main__":
