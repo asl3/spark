@@ -93,52 +93,53 @@ class LocalDataToArrowConversion:
 
     @staticmethod
     def _create_converter(
-            dataType: DataType,
-            nullable: bool = True,
-    ) -> Optional[Callable[[Any], Any]]:
+        dataType: DataType,
+        nullable: bool = True,
+    ) -> Callable:
         assert dataType is not None and isinstance(dataType, DataType)
         assert isinstance(nullable, bool)
 
-        def _converter(dt: DataType) -> Optional[Callable[[Any], Any]]:
-            if isinstance(dt, NullType):
+        if not LocalDataToArrowConversion._need_converter(dataType, nullable):
+            return lambda value: value
 
-                def convert_null(value: Any) -> Any:
-                    raise PySparkValueError(f"input for {dt} must be None, but got {value}")
+        if isinstance(dataType, NullType):
 
-                return convert_null
+            def convert_null(value: Any) -> Any:
+                if value is not None:
+                    raise PySparkValueError(f"input for {dataType} must be None, but got {value}")
+                return None
 
-            elif isinstance(dt, StructType):
-                field_names = dt.fieldNames()
-                dedup_field_names = _dedup_names(dt.names)
+            return convert_null
 
-                field_data_types = [field.dataType for field in dt.fields]
-                field_nullables = [field.nullable for field in dt.fields]
-                field_convs = [_converter(data_type) for data_type in field_data_types]
+        elif isinstance(dataType, StructType):
+            field_names = dataType.fieldNames()
+            dedup_field_names = _dedup_names(dataType.names)
 
-                def convert_struct(value: Any) -> Any:
+            field_convs = [
+                LocalDataToArrowConversion._create_converter(field.dataType, field.nullable)
+                for field in dataType.fields
+            ]
+
+            def convert_struct(value: Any) -> Any:
+                if value is None:
+                    if not nullable:
+                        raise PySparkValueError(f"input for {dataType} must not be None")
+                    return None
+                else:
                     assert isinstance(value, (tuple, dict)) or hasattr(
                         value, "__dict__"
                     ), f"{type(value)} {value}"
 
                     _dict = {}
                     if (
-                            not isinstance(value, Row)
-                            and not isinstance(value, tuple)  # inherited namedtuple
-                            and hasattr(value, "__dict__")
+                        not isinstance(value, Row)
+                        and not isinstance(value, tuple)  # inherited namedtuple
+                        and hasattr(value, "__dict__")
                     ):
                         value = value.__dict__
                     if isinstance(value, dict):
                         for i, field in enumerate(field_names):
-                            v = value.get(field)
-                            if not field_nullables[i] and v is None:
-                                raise PySparkValueError(
-                                    f"input for {field_data_types[i]} must not be None"
-                                )
-                            _dict[dedup_field_names[i]] = (
-                                field_convs[i](v)
-                                if field_convs[i] is not None and v is not None
-                                else v
-                            )
+                            _dict[dedup_field_names[i]] = field_convs[i](value.get(field))
                     else:
                         if len(value) != len(field_names):
                             raise PySparkValueError(
@@ -149,117 +150,110 @@ class LocalDataToArrowConversion:
                                 },
                             )
                         for i in range(len(field_names)):
-                            v = value[i]
-                            if not field_nullables[i] and v is None:
-                                raise PySparkValueError(
-                                    f"input for {field_data_types[i]} must not be None"
-                                )
-                            _dict[dedup_field_names[i]] = (
-                                field_convs[i](v)
-                                if field_convs[i] is not None and v is not None
-                                else v
-                            )
+                            _dict[dedup_field_names[i]] = field_convs[i](value[i])
 
                     return _dict
 
-                return convert_struct
+            return convert_struct
 
-            elif isinstance(dt, ArrayType):
-                element_type = dt.elementType
-                element_conv = _converter(element_type)
+        elif isinstance(dataType, ArrayType):
+            element_conv = LocalDataToArrowConversion._create_converter(
+                dataType.elementType, dataType.containsNull
+            )
 
-                if dt.containsNull:
-
-                    def convert_array(value: Any) -> Any:
-                        assert isinstance(value, (list, array.array))
-                        return [
-                            element_conv(v) if element_conv is not None and v is not None else v
-                            for v in value
-                        ]
-
+            def convert_array(value: Any) -> Any:
+                if value is None:
+                    if not nullable:
+                        raise PySparkValueError(f"input for {dataType} must not be None")
+                    return None
                 else:
+                    assert isinstance(value, (list, array.array))
+                    return [element_conv(v) for v in value]
 
-                    def convert_array(value: Any) -> Any:
-                        assert isinstance(value, (list, array.array))
-                        if any(v is None for v in value):
-                            raise PySparkValueError(f"input for {element_type} must not be None")
-                        return [element_conv(v) if element_conv is not None else v for v in value]
+            return convert_array
 
-                return convert_array
+        elif isinstance(dataType, MapType):
+            key_conv = LocalDataToArrowConversion._create_converter(dataType.keyType)
+            value_conv = LocalDataToArrowConversion._create_converter(
+                dataType.valueType, dataType.valueContainsNull
+            )
 
-            elif isinstance(dt, MapType):
-                key_type = dt.keyType
-                key_conv = _converter(key_type)
-                value_type = dt.valueType
-                value_conv = _converter(value_type)
-
-                if dt.valueContainsNull:
-
-                    def convert_map(value: Any) -> Any:
-                        assert isinstance(value, dict)
-                        if any(k is None for k in value.keys()):
-                            raise PySparkValueError(f"input for {key_type} must not be None")
-                        return [
-                            (
-                                key_conv(k) if key_conv is not None else k,
-                                value_conv(v) if value_conv is not None and v is not None else v,
-                            )
-                            for k, v in value.items()
-                        ]
-
+            def convert_map(value: Any) -> Any:
+                if value is None:
+                    if not nullable:
+                        raise PySparkValueError(f"input for {dataType} must not be None")
+                    return None
                 else:
+                    assert isinstance(value, dict)
 
-                    def convert_map(value: Any) -> Any:
-                        assert isinstance(value, dict)
-                        if any(k is None for k in value.keys()):
-                            raise PySparkValueError(f"input for {key_type} must not be None")
-                        if any(v is None for v in value.values()):
-                            raise PySparkValueError(f"input for {value_type} must not be None")
-                        return [
-                            (
-                                key_conv(k) if key_conv is not None else k,
-                                value_conv(v) if value_conv is not None else v,
-                            )
-                            for k, v in value.items()
-                        ]
+                    _tuples = []
+                    for k, v in value.items():
+                        _tuples.append((key_conv(k), value_conv(v)))
 
-                return convert_map
+                    return _tuples
 
-            elif isinstance(dt, BinaryType):
+            return convert_map
 
-                def convert_binary(value: Any) -> Any:
+        elif isinstance(dataType, BinaryType):
+
+            def convert_binary(value: Any) -> Any:
+                if value is None:
+                    if not nullable:
+                        raise PySparkValueError(f"input for {dataType} must not be None")
+                    return None
+                else:
                     assert isinstance(value, (bytes, bytearray))
                     return bytes(value)
 
-                return convert_binary
+            return convert_binary
 
-            elif isinstance(dt, TimestampType):
+        elif isinstance(dataType, TimestampType):
 
-                def convert_timestamp(value: Any) -> Any:
+            def convert_timestamp(value: Any) -> Any:
+                if value is None:
+                    if not nullable:
+                        raise PySparkValueError(f"input for {dataType} must not be None")
+                    return None
+                else:
                     assert isinstance(value, datetime.datetime)
                     return value.astimezone(datetime.timezone.utc)
 
-                return convert_timestamp
+            return convert_timestamp
 
-            elif isinstance(dt, TimestampNTZType):
+        elif isinstance(dataType, TimestampNTZType):
 
-                def convert_timestamp_ntz(value: Any) -> Any:
+            def convert_timestamp_ntz(value: Any) -> Any:
+                if value is None:
+                    if not nullable:
+                        raise PySparkValueError(f"input for {dataType} must not be None")
+                    return None
+                else:
                     assert isinstance(value, datetime.datetime) and value.tzinfo is None
                     return value
 
-                return convert_timestamp_ntz
+            return convert_timestamp_ntz
 
-            elif isinstance(dt, DecimalType):
+        elif isinstance(dataType, DecimalType):
 
-                def convert_decimal(value: Any) -> Any:
+            def convert_decimal(value: Any) -> Any:
+                if value is None:
+                    if not nullable:
+                        raise PySparkValueError(f"input for {dataType} must not be None")
+                    return None
+                else:
                     assert isinstance(value, decimal.Decimal)
                     return None if value.is_nan() else value
 
-                return convert_decimal
+            return convert_decimal
 
-            elif isinstance(dt, StringType):
+        elif isinstance(dataType, StringType):
 
-                def convert_string(value: Any) -> Any:
+            def convert_string(value: Any) -> Any:
+                if value is None:
+                    if not nullable:
+                        raise PySparkValueError(f"input for {dataType} must not be None")
+                    return None
+                else:
                     if isinstance(value, bool):
                         # To match the PySpark Classic which convert bool to string in
                         # the JVM side (python.EvaluatePython.makeFromJava)
@@ -267,45 +261,47 @@ class LocalDataToArrowConversion:
                     else:
                         return str(value)
 
-                return convert_string
+            return convert_string
 
-            elif isinstance(dt, UserDefinedType):
-                udt: UserDefinedType = dt
+        elif isinstance(dataType, UserDefinedType):
+            udt: UserDefinedType = dataType
 
-                conv = _converter(udt.sqlType())
+            conv = LocalDataToArrowConversion._create_converter(udt.sqlType())
 
-                def convert_udt(value: Any) -> Any:
-                    return conv(udt.serialize(value)) if conv is not None else udt.serialize(value)
-
-                return convert_udt
-
-            elif isinstance(dt, VariantType):
-
-                def convert_variant(value: Any) -> Any:
-                    if isinstance(value, VariantVal):
-                        return VariantType().toInternal(value)
-                    else:
-                        raise PySparkValueError(errorClass="MALFORMED_VARIANT")
-
-                return convert_variant
-
-            else:
-                return None
-
-        conv = _converter(dataType)
-
-        if nullable and conv is None:
-            return None
-
-        else:
-
-            def convert(value: Any) -> Any:
-                if not nullable and value is None:
-                    raise PySparkValueError(f"input for {dataType} must not be None")
+            def convert_udt(value: Any) -> Any:
+                if value is None:
+                    if not nullable:
+                        raise PySparkValueError(f"input for {dataType} must not be None")
+                    return None
                 else:
-                    return conv(value) if conv is not None and value is not None else value
+                    return conv(udt.serialize(value))
 
-            return convert
+            return convert_udt
+
+        elif isinstance(dataType, VariantType):
+
+            def convert_variant(value: Any) -> Any:
+                if value is None:
+                    if not nullable:
+                        raise PySparkValueError(f"input for {dataType} must not be None")
+                    return None
+                elif isinstance(value, VariantVal):
+                    return VariantType().toInternal(value)
+                else:
+                    raise PySparkValueError(errorClass="MALFORMED_VARIANT")
+
+            return convert_variant
+
+        elif not nullable:
+
+            def convert_other(value: Any) -> Any:
+                if value is None:
+                    raise PySparkValueError(f"input for {dataType} must not be None")
+                return value
+
+            return convert_other
+        else:
+            return lambda value: value
 
     @staticmethod
     def convert(data: Sequence[Any], schema: StructType, use_large_var_types: bool) -> "pa.Table":
