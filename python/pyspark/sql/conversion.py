@@ -366,19 +366,9 @@ class LocalDataToArrowConversion:
         else:
             return None
 
+
     @staticmethod
-    def convert(data: Sequence[Any], schema: StructType, use_large_var_types: bool) -> "pa.Table":
-        require_minimum_pyarrow_version()
-        import pyarrow as pa
-
-        assert isinstance(data, list) and len(data) > 0
-
-        assert schema is not None and isinstance(schema, StructType)
-
-        column_names = schema.fieldNames()
-        len_column_names = len(column_names)
-
-        def to_row(item: Any) -> tuple:
+    def to_row(item: Any, column_names: List[str], len_column_names: int) -> tuple:
             if item is None:
                 return tuple([None] * len_column_names)
             elif isinstance(item, (Row, tuple)):
@@ -409,7 +399,19 @@ class LocalDataToArrowConversion:
                     )
                 return tuple(item)
 
-        rows = [to_row(item) for item in data]
+    @staticmethod
+    def convert(data: Sequence[Any], schema: StructType, use_large_var_types: bool) -> "pa.Table":
+        require_minimum_pyarrow_version()
+        import pyarrow as pa
+
+        assert isinstance(data, list) and len(data) > 0
+
+        assert schema is not None and isinstance(schema, StructType)
+
+        column_names = schema.fieldNames()
+        len_column_names = len(column_names)
+
+        rows = [LocalDataToArrowConversion.to_row(item, column_names, len_column_names) for item in data]
 
         column_convs = [
             LocalDataToArrowConversion._create_converter(field.dataType, field.nullable)
