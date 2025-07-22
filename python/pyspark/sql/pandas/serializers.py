@@ -190,10 +190,32 @@ class ArrowStreamUDFSerializer(ArrowStreamSerializer):
 class ArrowStreamUDTFSerializer(ArrowStreamUDFSerializer):
     """
     Same as :class:`ArrowStreamUDFSerializer` but it does not flatten when loading batches.
+    Now also responsible for converting Python objects to Arrow batches for UDTFs.
     """
 
     def load_stream(self, stream):
         return ArrowStreamSerializer.load_stream(self, stream)
+
+    def dump_stream(self, iterator, stream):
+        """
+        Convert Python objects yielded by the worker to Arrow batches and stream them.
+        """
+        import pyarrow as pa
+        from pyspark.sql.conversion import LocalDataToArrowConversion
+        # The return type/schema must be available on self (set by the runner)
+        return_type = getattr(self, '_return_type', None)
+        prefers_large_var_types = getattr(self, '_prefers_large_var_types', False)
+
+        def py_to_arrow_batches():
+            for pyobj in iterator:
+                # Convert the Python object to Arrow batches
+                batches = LocalDataToArrowConversion.convert(
+                    [pyobj], return_type, prefers_large_var_types
+                ).to_batches()
+                for batch in batches:
+                    yield batch
+
+        return ArrowStreamSerializer.dump_stream(self, py_to_arrow_batches(), stream)
 
 
 class ArrowStreamGroupUDFSerializer(ArrowStreamUDFSerializer):
@@ -1496,7 +1518,7 @@ class TransformWithStateInPandasInitStateSerializer(TransformWithStateInPandasSe
 
         def generate_data_batches(batches):
             """
-            Deserialize ArrowRecordBatches and return a generator of pandas.Series list.
+            Deserialize ArrowRecordBatches and return a generator of Row.
             The deserialization logic assumes that Arrow RecordBatches contain the data with the
             ordering that data chunks for same grouping key will appear sequentially.
             See `TransformWithStateInPandasPythonInitialStateRunner` for arrow batch schema sent
