@@ -40,6 +40,7 @@ from pyspark.sql.pandas.types import (
     to_arrow_type,
     _create_converter_from_pandas,
     _create_converter_to_pandas,
+    from_arrow_schema,
 )
 from pyspark.sql.types import (
     DataType,
@@ -189,11 +190,57 @@ class ArrowStreamUDFSerializer(ArrowStreamSerializer):
 
 class ArrowStreamUDTFSerializer(ArrowStreamUDFSerializer):
     """
-    Same as :class:`ArrowStreamUDFSerializer` but it does not flatten when loading batches.
+    Serializer for Arrow-optimized UDTFs. Handles conversion between Python objects and Arrow format.
     """
+    def __init__(self, timezone, safecheck, return_type, prefers_large_var_types):
+        super().__init__()
+        self.timezone = timezone
+        self.safecheck = safecheck
+        self.return_type = return_type
+        self.prefers_large_var_types = prefers_large_var_types
 
     def load_stream(self, stream):
-        return ArrowStreamSerializer.load_stream(self, stream)
+        """Load a stream of Arrow record batches and convert to Python objects lazily."""
+        import pyarrow as pa
+        from pyspark.sql.conversion import ArrowTableToRowsConversion
+
+        for batch in ArrowStreamSerializer.load_stream(self, stream):
+            # Convert each batch to Python tuples lazily
+            table = pa.Table.from_batches([batch])
+            schema = from_arrow_schema(table.schema, self.prefers_large_var_types)
+            for row in ArrowTableToRowsConversion.convert(table, schema=schema, return_as_tuples=True):
+                yield row
+
+    def dump_stream(self, iterator, stream):
+        """Convert Python objects to Arrow record batches and stream them."""
+        import pyarrow as pa
+        from pyspark.sql.conversion import LocalDataToArrowConversion
+
+        def convert_to_arrow(data):
+            try:
+                return LocalDataToArrowConversion.convert(
+                    data, self.return_type, self.prefers_large_var_types
+                ).to_batches()
+            except Exception as e:
+                raise PySparkRuntimeError(
+                    errorClass="UDTF_ARROW_TYPE_CONVERSION_ERROR",
+                    messageParameters={
+                        "data": str(data),
+                        "schema": self.return_type.simpleString(),
+                        "arrow_schema": str(to_arrow_type(self.return_type)),
+                    },
+                ) from e
+
+        def process_iterator():
+            for result in iterator:
+                if result is None:
+                    continue
+                if not isinstance(result, (list, tuple)):
+                    result = [result]
+                for batch in convert_to_arrow(result):
+                    yield batch
+
+        return ArrowStreamSerializer.dump_stream(self, process_iterator(), stream)
 
 
 class ArrowStreamGroupUDFSerializer(ArrowStreamUDFSerializer):
@@ -1428,7 +1475,7 @@ class TransformWithStateInPandasSerializer(ArrowStreamPandasUDFSerializer):
 
         def generate_data_batches(batches):
             """
-            Deserialize ArrowRecordBatches and return a generator of Rows.
+            Deserialize ArrowRecordBatches and return a generator of pandas.Series list.
 
             The deserialization logic assumes that Arrow RecordBatches contain the data with the
             ordering that data chunks for same grouping key will appear sequentially.
@@ -1496,7 +1543,7 @@ class TransformWithStateInPandasInitStateSerializer(TransformWithStateInPandasSe
 
         def generate_data_batches(batches):
             """
-            Deserialize ArrowRecordBatches and return a generator of pandas.Series list.
+            Deserialize ArrowRecordBatches and return a generator of Row.
             The deserialization logic assumes that Arrow RecordBatches contain the data with the
             ordering that data chunks for same grouping key will appear sequentially.
             See `TransformWithStateInPandasPythonInitialStateRunner` for arrow batch schema sent
