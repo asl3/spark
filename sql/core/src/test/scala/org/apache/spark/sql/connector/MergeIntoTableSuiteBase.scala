@@ -2225,6 +2225,54 @@ abstract class MergeIntoTableSuiteBase extends RowLevelOperationSuiteBase
     }
   }
 
+  test("Merge metrics with numSourceRows when source has filter") {
+    // Verify numSourceRows when source involves Filter -> BatchScanExec
+    val sourceTable = "cat.ns1.source_table"
+    Seq("true", "false").foreach { aqeEnabled: String =>
+      withTable(sourceTable) {
+        withSQLConf(SQLConf.ADAPTIVE_EXECUTION_ENABLED.key -> aqeEnabled) {
+          createAndInitTable(
+            "pk INT NOT NULL, salary INT, dep STRING",
+            """{ "pk": 1, "salary": 100, "dep": "hr" }
+              |{ "pk": 2, "salary": 200, "dep": "software" }
+              |{ "pk": 3, "salary": 300, "dep": "hr" }
+              |""".stripMargin)
+
+          // Create V2 source table with 4 rows
+          val sourceIdent = Identifier.of(Array("ns1"), "source_table")
+          val columns = Array(
+            Column.create("pk", IntegerType, false),
+            Column.create("data", StringType))
+          val tableInfo = new TableInfo.Builder()
+            .withColumns(columns)
+            .withProperties(extraTableProps)
+            .build()
+          catalog.createTable(sourceIdent, tableInfo)
+
+          sql(s"INSERT INTO $sourceTable VALUES (1, 'a'), (2, 'b'), (3, 'c'), (4, 'd')")
+
+          // Filter reduces to 2 rows
+          sql(s"""MERGE INTO $tableNameAsString t
+               |USING (SELECT * FROM $sourceTable WHERE pk <= 2) s
+               |ON t.pk = s.pk
+               |WHEN MATCHED THEN
+               | UPDATE SET salary = 1000
+               |WHEN NOT MATCHED THEN
+               | INSERT (pk, salary, dep) VALUES (s.pk, -1, "new")
+               |""".stripMargin)
+
+          val mergeSummary = getMergeSummary()
+          // Expect 2 rows after filter
+          assert(mergeSummary.numSourceRows === 2L)
+          assert(mergeSummary.numTargetRowsUpdated === 2L)
+          assert(mergeSummary.numTargetRowsInserted === 0L)
+
+          sql(s"DROP TABLE $tableNameAsString")
+        }
+      }
+    }
+  }
+
   test("Merge schema evolution new column with set explicit column") {
     Seq((true, true), (false, true), (true, false)).foreach {
       case (withSchemaEvolution, schemaEvolutionEnabled) =>
