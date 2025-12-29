@@ -31,7 +31,9 @@ from pyspark.sql.types import (
     BinaryType,
     BooleanType,
     ByteType,
+    CharType,
     DateType,
+    DayTimeIntervalType,
     DecimalType,
     DoubleType,
     FloatType,
@@ -42,7 +44,11 @@ from pyspark.sql.types import (
     StringType,
     StructField,
     StructType,
+    TimestampNTZType,
     TimestampType,
+    VarcharType,
+    VariantType,
+    YearMonthIntervalType,
 )
 from pyspark.loose_version import LooseVersion
 from pyspark.testing.utils import (
@@ -82,18 +88,27 @@ class UDFReturnTypeTests(ReusedSQLTestCase):
             None,
             True,
             1,
+            -1,
             "a",
+            "",
             datetime.date(1970, 1, 1),
             datetime.datetime(1970, 1, 1, 0, 0),
+            datetime.datetime(1970, 1, 1, 0, 0, tzinfo=datetime.timezone.utc),
+            datetime.timedelta(days=1),
             1.0,
             array.array("i", [1]),
             [1],
+            [],
             (1,),
             bytearray([65, 66, 67]),
+            b"ABC",
             Decimal(1),
             {"a": 1},
+            {},
             Row(kwargs=1),
             Row("namedtuple")(1),
+            np.int64(1),
+            np.float64(1.0),
         ]
 
         self.test_types = [
@@ -103,8 +118,13 @@ class UDFReturnTypeTests(ReusedSQLTestCase):
             IntegerType(),
             LongType(),
             StringType(),
+            CharType(10),
+            VarcharType(10),
             DateType(),
             TimestampType(),
+            TimestampNTZType(),
+            DayTimeIntervalType(),
+            YearMonthIntervalType(),
             FloatType(),
             DoubleType(),
             ArrayType(IntegerType()),
@@ -112,6 +132,7 @@ class UDFReturnTypeTests(ReusedSQLTestCase):
             DecimalType(10, 0),
             MapType(StringType(), IntegerType()),
             StructType([StructField("_1", IntegerType())]),
+            VariantType(),
         ]
 
         self.pandas_test_data = [
